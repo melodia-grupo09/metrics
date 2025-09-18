@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { RabbitModule } from './rabbit/rabbit.module';
@@ -6,7 +7,14 @@ import { MetricsModule } from './metrics/metrics.module';
 import { DatabaseModule } from './database/database.module';
 
 @Module({
-  imports: [RabbitModule, MetricsModule, DatabaseModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    RabbitModule,
+    MetricsModule,
+    DatabaseModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
