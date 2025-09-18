@@ -60,3 +60,7 @@ $ npm run test:cov
 ## Coverage
 
 The coverage link is at https://app.codecov.io/github/iregazzoli/metrics
+
+## TODO
+
+- Add a logger that connects to like New relic or smthing since it needs to "Estos logs deberán ser almacenados de tal manera que puedan ser accedidos en cualquier momento"
