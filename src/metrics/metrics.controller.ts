@@ -1,18 +1,27 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { MetricsService } from './metrics.service';
-import { SongMetricDto } from './dto/song-metric.dto';
 
 @Controller('metrics')
 export class MetricsController {
-  constructor(private metricsService: MetricsService) {}
+  constructor(private readonly metricsService: MetricsService) {}
 
-  @Post('song')
-  recordSongMetric(@Body() data: SongMetricDto) {
-    return this.metricsService.recordSongMetric(data);
+  @Post('songs/:songId/plays')
+  incrementSongPlays(@Param('songId') songId: string) {
+    return this.metricsService.incrementSongPlays(songId);
   }
 
-  @Get('song/:id')
-  async getSongMetrics(@Param('id') songId: string) {
-    return await this.metricsService.getSongMetrics(songId);
+  @Post('songs/:songId/likes')
+  incrementSongLikes(@Param('songId') songId: string) {
+    return this.metricsService.incrementSongLikes(songId);
+  }
+
+  @Post('songs/:songId/shares')
+  incrementSongShares(@Param('songId') songId: string) {
+    return this.metricsService.incrementSongShares(songId);
+  }
+
+  @Get('songs/:songId')
+  getSongMetrics(@Param('songId') songId: string) {
+    return this.metricsService.getSongMetrics(songId);
   }
 }
