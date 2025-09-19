@@ -2,12 +2,13 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MetricsController } from './metrics.controller';
 import { MetricsService } from './metrics.service';
+import { MetricsConsumer } from './metrics.consumer';
 import { SongMetric } from './entities/song-metric.entity';
 import { RabbitModule } from '../rabbit/rabbit.module';
 
 @Module({
   imports: [TypeOrmModule.forFeature([SongMetric]), RabbitModule],
   controllers: [MetricsController],
-  providers: [MetricsService],
+  providers: [MetricsService, MetricsConsumer],
 })
 export class MetricsModule {}
