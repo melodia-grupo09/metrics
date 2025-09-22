@@ -5,9 +5,9 @@ export class SongAlbum {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   songId: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   albumId: string;
 }

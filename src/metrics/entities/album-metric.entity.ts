@@ -10,7 +10,7 @@ export class AlbumMetric {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   albumId: string;
 
   @Column({ default: 0 })

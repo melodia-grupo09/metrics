@@ -39,7 +39,7 @@ describe('MetricsController', () => {
 
   describe('createSong', () => {
     it('should create a song successfully', async () => {
-      const songId = 'song123';
+      const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
       const result = { message: 'Song created successfully', songId };
       mockMetricsService.createSong.mockResolvedValue(result);
 
@@ -50,7 +50,7 @@ describe('MetricsController', () => {
 
   describe('incrementSongPlays', () => {
     it('should increment song plays successfully', async () => {
-      const songId = 'song123';
+      const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
       const result = { message: 'Song play recorded' };
       mockMetricsService.incrementSongPlays.mockResolvedValue(result);
 
@@ -63,7 +63,7 @@ describe('MetricsController', () => {
 
   describe('incrementSongLikes', () => {
     it('should increment song likes successfully', async () => {
-      const songId = 'song123';
+      const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
       const result = { message: 'Song like recorded' };
       mockMetricsService.incrementSongLikes.mockResolvedValue(result);
 
@@ -76,7 +76,7 @@ describe('MetricsController', () => {
 
   describe('incrementSongShares', () => {
     it('should increment song shares successfully', async () => {
-      const songId = 'song123';
+      const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
       const result = { message: 'Song share recorded' };
       mockMetricsService.incrementSongShares.mockResolvedValue(result);
 
@@ -89,9 +89,9 @@ describe('MetricsController', () => {
 
   describe('getSongMetrics', () => {
     it('should get song metrics successfully', async () => {
-      const songId = 'song123';
+      const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
       const result = {
-        songId: 'song123',
+        songId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
         plays: 10,
         likes: 5,
         shares: 2,
@@ -105,7 +105,7 @@ describe('MetricsController', () => {
 
   describe('createAlbum', () => {
     it('should create an album successfully', async () => {
-      const albumId = 'album123';
+      const albumId = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
       const result = { message: 'Album created successfully', albumId };
       mockMetricsService.createAlbum.mockResolvedValue(result);
 
@@ -116,7 +116,7 @@ describe('MetricsController', () => {
 
   describe('incrementAlbumLikes', () => {
     it('should increment album likes successfully', async () => {
-      const albumId = 'album123';
+      const albumId = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
       const result = { message: 'Album like recorded' };
       mockMetricsService.incrementAlbumLikes.mockResolvedValue(result);
 
@@ -129,7 +129,7 @@ describe('MetricsController', () => {
 
   describe('incrementAlbumShares', () => {
     it('should increment album shares successfully', async () => {
-      const albumId = 'album123';
+      const albumId = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
       const result = { message: 'Album share recorded' };
       mockMetricsService.incrementAlbumShares.mockResolvedValue(result);
 
@@ -142,13 +142,16 @@ describe('MetricsController', () => {
 
   describe('getAlbumMetrics', () => {
     it('should get album metrics successfully', async () => {
-      const albumId = 'album123';
+      const albumId = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
       const result = {
-        albumId: 'album123',
+        albumId: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
         likes: 8,
         shares: 3,
         totalPlays: 25,
-        songPlays: { song1: 10, song2: 15 },
+        songPlays: {
+          'f47ac10b-58cc-4372-a567-0e02b2c3d479': 10,
+          '6ba7b811-9dad-11d1-80b4-00c04fd430c8': 15,
+        },
       };
       mockMetricsService.getAlbumMetrics.mockResolvedValue(result);
 
@@ -159,7 +162,10 @@ describe('MetricsController', () => {
 
   describe('addSongToAlbum', () => {
     it('should add song to album successfully', async () => {
-      const songAlbumDto = { songId: 'song123', albumId: 'album123' };
+      const songAlbumDto = {
+        songId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        albumId: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+      };
       const result = { message: 'Song added to album successfully' };
       mockMetricsService.addSongToAlbum.mockResolvedValue(result);
 
@@ -173,7 +179,10 @@ describe('MetricsController', () => {
 
   describe('removeSongFromAlbum', () => {
     it('should remove song from album successfully', async () => {
-      const songAlbumDto = { songId: 'song123', albumId: 'album123' };
+      const songAlbumDto = {
+        songId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        albumId: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+      };
       const result = { message: 'Song removed from album successfully' };
       mockMetricsService.removeSongFromAlbum.mockResolvedValue(result);
 

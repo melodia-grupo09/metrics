@@ -52,7 +52,7 @@ describe('MetricsService', () => {
 
   describe('createSong', () => {
     it('should create a new song successfully', async () => {
-      const songId = 'song123';
+      const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
       mockRepository.findOne.mockResolvedValue(null);
       mockRepository.save.mockResolvedValue({
         songId,
@@ -74,7 +74,7 @@ describe('MetricsService', () => {
     });
 
     it('should throw BadRequestException if song already exists', async () => {
-      const songId = 'song123';
+      const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
       mockRepository.findOne.mockResolvedValue({ songId });
 
       await expect(service.createSong(songId)).rejects.toThrow(
@@ -88,7 +88,7 @@ describe('MetricsService', () => {
 
   describe('incrementSongPlays', () => {
     it('should increment song plays successfully', async () => {
-      const songId = 'song123';
+      const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
       mockRepository.findOne.mockResolvedValue({ songId });
 
       const result = await service.incrementSongPlays(songId);
@@ -102,7 +102,7 @@ describe('MetricsService', () => {
     });
 
     it('should throw NotFoundException if song does not exist', async () => {
-      const songId = 'nonexistent';
+      const songId = '550e8400-e29b-41d4-a716-446655440000';
       mockRepository.findOne.mockResolvedValue(null);
 
       await expect(service.incrementSongPlays(songId)).rejects.toThrow(
@@ -113,7 +113,7 @@ describe('MetricsService', () => {
 
   describe('getSongMetrics', () => {
     it('should return song metrics successfully', async () => {
-      const songId = 'song123';
+      const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
       const mockMetrics = {
         songId,
         plays: 10,
@@ -133,7 +133,7 @@ describe('MetricsService', () => {
     });
 
     it('should throw NotFoundException if song does not exist', async () => {
-      const songId = 'nonexistent';
+      const songId = '550e8400-e29b-41d4-a716-446655440000';
       mockRepository.findOne.mockResolvedValue(null);
 
       await expect(service.getSongMetrics(songId)).rejects.toThrow(
@@ -144,7 +144,7 @@ describe('MetricsService', () => {
 
   describe('createAlbum', () => {
     it('should create a new album successfully', async () => {
-      const albumId = 'album123';
+      const albumId = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
       mockRepository.findOne.mockResolvedValue(null);
       mockRepository.save.mockResolvedValue({
         albumId,
@@ -165,7 +165,7 @@ describe('MetricsService', () => {
     });
 
     it('should throw BadRequestException if album already exists', async () => {
-      const albumId = 'album123';
+      const albumId = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
       mockRepository.findOne.mockResolvedValue({ albumId });
 
       await expect(service.createAlbum(albumId)).rejects.toThrow(
@@ -176,8 +176,8 @@ describe('MetricsService', () => {
 
   describe('addSongToAlbum', () => {
     it('should add song to album successfully', async () => {
-      const songId = 'song123';
-      const albumId = 'album123';
+      const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+      const albumId = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
 
       // Mock song exists, album exists, no existing relation
       mockRepository.findOne
@@ -197,8 +197,8 @@ describe('MetricsService', () => {
     });
 
     it('should throw NotFoundException if song does not exist', async () => {
-      const songId = 'nonexistent';
-      const albumId = 'album123';
+      const songId = '550e8400-e29b-41d4-a716-446655440000';
+      const albumId = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
       mockRepository.findOne.mockResolvedValue(null);
 
       await expect(service.addSongToAlbum(songId, albumId)).rejects.toThrow(
@@ -207,8 +207,8 @@ describe('MetricsService', () => {
     });
 
     it('should throw BadRequestException if song is already in album', async () => {
-      const songId = 'song123';
-      const albumId = 'album123';
+      const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+      const albumId = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
 
       // Mock song exists, album exists, but relation already exists
       mockRepository.findOne

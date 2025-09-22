@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { MetricsService } from './metrics.service';
 import { SongAlbumDto } from './dto/song-album.dto';
 import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
@@ -16,7 +24,7 @@ export class MetricsController {
   })
   @ApiResponse({ status: 400, description: 'Song already exists' })
   @Post('songs/:songId')
-  async createSong(@Param('songId') songId: string) {
+  async createSong(@Param('songId', ParseUUIDPipe) songId: string) {
     return this.metricsService.createSong(songId);
   }
 
@@ -27,7 +35,7 @@ export class MetricsController {
   })
   @ApiResponse({ status: 404, description: 'Song not found' })
   @Post('songs/:songId/plays')
-  async incrementSongPlays(@Param('songId') songId: string) {
+  async incrementSongPlays(@Param('songId', ParseUUIDPipe) songId: string) {
     return this.metricsService.incrementSongPlays(songId);
   }
 
@@ -35,7 +43,7 @@ export class MetricsController {
   @ApiResponse({ status: 200, description: 'Song like recorded successfully' })
   @ApiResponse({ status: 404, description: 'Song not found' })
   @Post('songs/:songId/likes')
-  async incrementSongLikes(@Param('songId') songId: string) {
+  async incrementSongLikes(@Param('songId', ParseUUIDPipe) songId: string) {
     return this.metricsService.incrementSongLikes(songId);
   }
 
@@ -46,7 +54,7 @@ export class MetricsController {
   })
   @ApiResponse({ status: 404, description: 'Song not found' })
   @Post('songs/:songId/shares')
-  async incrementSongShares(@Param('songId') songId: string) {
+  async incrementSongShares(@Param('songId', ParseUUIDPipe) songId: string) {
     return this.metricsService.incrementSongShares(songId);
   }
 
@@ -54,7 +62,7 @@ export class MetricsController {
   @ApiResponse({ status: 200, description: 'Metrics retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Song not found' })
   @Get('songs/:songId')
-  async getSongMetrics(@Param('songId') songId: string) {
+  async getSongMetrics(@Param('songId', ParseUUIDPipe) songId: string) {
     return this.metricsService.getSongMetrics(songId);
   }
 
@@ -66,7 +74,7 @@ export class MetricsController {
   })
   @ApiResponse({ status: 400, description: 'Album already exists' })
   @Post('albums/:albumId')
-  async createAlbum(@Param('albumId') albumId: string) {
+  async createAlbum(@Param('albumId', ParseUUIDPipe) albumId: string) {
     return this.metricsService.createAlbum(albumId);
   }
 
@@ -74,7 +82,7 @@ export class MetricsController {
   @ApiResponse({ status: 200, description: 'Album like recorded successfully' })
   @ApiResponse({ status: 404, description: 'Album not found' })
   @Post('albums/:albumId/likes')
-  async incrementAlbumLikes(@Param('albumId') albumId: string) {
+  async incrementAlbumLikes(@Param('albumId', ParseUUIDPipe) albumId: string) {
     return this.metricsService.incrementAlbumLikes(albumId);
   }
 
@@ -85,7 +93,7 @@ export class MetricsController {
   })
   @ApiResponse({ status: 404, description: 'Album not found' })
   @Post('albums/:albumId/shares')
-  async incrementAlbumShares(@Param('albumId') albumId: string) {
+  async incrementAlbumShares(@Param('albumId', ParseUUIDPipe) albumId: string) {
     return this.metricsService.incrementAlbumShares(albumId);
   }
 
@@ -93,7 +101,7 @@ export class MetricsController {
   @ApiResponse({ status: 200, description: 'Metrics retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Album not found' })
   @Get('albums/:albumId')
-  async getAlbumMetrics(@Param('albumId') albumId: string) {
+  async getAlbumMetrics(@Param('albumId', ParseUUIDPipe) albumId: string) {
     return this.metricsService.getAlbumMetrics(albumId);
   }
 

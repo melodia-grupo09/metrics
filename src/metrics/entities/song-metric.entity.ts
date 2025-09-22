@@ -10,7 +10,7 @@ export class SongMetric {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   songId: string;
 
   @Column({ default: 0 })
