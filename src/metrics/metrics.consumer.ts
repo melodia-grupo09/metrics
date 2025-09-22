@@ -3,8 +3,9 @@ import amqp, { ChannelWrapper } from 'amqp-connection-manager';
 import { ConfirmChannel } from 'amqplib';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SongMetric } from './entities/song-metric.entity';
 import { AlbumMetric } from './entities/album-metric.entity';
+import { SongMetric } from './entities/song-metric.entity';
+import { UserMetric } from './user/user-metric.entity';
 
 interface SongMetricEvent {
   pattern?: string;
@@ -24,16 +25,28 @@ interface AlbumMetricEvent {
   };
 }
 
+interface UserMetricEvent {
+  pattern?: string;
+  data: {
+    userId: string;
+    email?: string;
+    metricType: 'registration' | 'activity';
+    timestamp: Date;
+  };
+}
+
 @Injectable()
 export class MetricsConsumer implements OnModuleInit {
   private channelWrapper: ChannelWrapper;
   private readonly logger = new Logger(MetricsConsumer.name);
 
   constructor(
-    @InjectRepository(SongMetric)
-    private songMetricRepository: Repository<SongMetric>,
     @InjectRepository(AlbumMetric)
     private albumMetricRepository: Repository<AlbumMetric>,
+    @InjectRepository(SongMetric)
+    private songMetricRepository: Repository<SongMetric>,
+    @InjectRepository(UserMetric)
+    private userMetricRepository: Repository<UserMetric>,
   ) {
     const connection = amqp.connect(['amqp://localhost:5672']);
     this.channelWrapper = connection.createChannel();
@@ -47,13 +60,16 @@ export class MetricsConsumer implements OnModuleInit {
         await channel.consume('metrics_queue', (message) => {
           if (message) {
             try {
-              type MetricEvent = SongMetricEvent | AlbumMetricEvent;
+              type MetricEvent =
+                | SongMetricEvent
+                | AlbumMetricEvent
+                | UserMetricEvent;
               const eventData = JSON.parse(
                 message.content.toString(),
               ) as MetricEvent;
               this.logger.log('Received message:', eventData);
 
-              // Determine if it's a song or album metric based on pattern
+              // Determine if it's a song, album, or user metric based on pattern
               if (eventData.pattern === 'metrics.song') {
                 this.handleSongMetric(eventData as SongMetricEvent)
                   .then(() => channel.ack(message))
@@ -66,6 +82,13 @@ export class MetricsConsumer implements OnModuleInit {
                   .then(() => channel.ack(message))
                   .catch((error) => {
                     this.logger.error('Error processing album message:', error);
+                    channel.ack(message);
+                  });
+              } else if (eventData.pattern === 'metrics.user') {
+                this.handleUserMetric(eventData as UserMetricEvent)
+                  .then(() => channel.ack(message))
+                  .catch((error) => {
+                    this.logger.error('Error processing user message:', error);
                     channel.ack(message);
                   });
               } else {
@@ -88,10 +111,9 @@ export class MetricsConsumer implements OnModuleInit {
     }
   }
 
-  async handleSongMetric(eventData: SongMetricEvent) {
-    this.logger.log('Processing message:', eventData);
+  async handleSongMetric(eventData: SongMetricEvent): Promise<void> {
+    this.logger.log('Processing song message:', eventData);
     try {
-      // Extraemos los datos del mensaje
       const data = eventData.data;
 
       if (!data || !data.songId) {
@@ -99,16 +121,15 @@ export class MetricsConsumer implements OnModuleInit {
         return;
       }
 
-      let songMetric = await this.songMetricRepository.findOne({
+      const songMetric = await this.songMetricRepository.findOne({
         where: { songId: data.songId },
       });
 
       if (!songMetric) {
-        songMetric = new SongMetric();
-        songMetric.songId = data.songId;
-        songMetric.plays = 0;
-        songMetric.likes = 0;
-        songMetric.shares = 0;
+        this.logger.warn(
+          `Song ${data.songId} not found in database, skipping metric update`,
+        );
+        return;
       }
 
       switch (data.metricType) {
@@ -122,7 +143,9 @@ export class MetricsConsumer implements OnModuleInit {
           songMetric.shares += 1;
           break;
         default:
-          this.logger.warn(`Unknown metric type: ${String(data.metricType)}`);
+          this.logger.warn(
+            `Unknown song metric type: ${String(data.metricType)}`,
+          );
       }
 
       await this.songMetricRepository.save(songMetric);
@@ -131,6 +154,16 @@ export class MetricsConsumer implements OnModuleInit {
       this.logger.error('Error processing song metric:', error);
       throw error;
     }
+  }
+
+  async handleUserMetric(eventData: UserMetricEvent): Promise<void> {
+    this.logger.log('Processing user message:', eventData);
+    // User metrics are already handled directly in the service methods
+    // This is mainly for logging and potential future processing
+    this.logger.log(
+      `User metric ${eventData.data.metricType} processed for user ${eventData.data.userId}`,
+    );
+    await Promise.resolve();
   }
 
   async handleAlbumMetric(eventData: AlbumMetricEvent) {
