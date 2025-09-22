@@ -146,6 +146,7 @@ export class MetricsConsumer implements OnModuleInit {
           this.logger.warn(
             `Unknown song metric type: ${String(data.metricType)}`,
           );
+          return;
       }
 
       await this.songMetricRepository.save(songMetric);
@@ -198,6 +199,7 @@ export class MetricsConsumer implements OnModuleInit {
           this.logger.warn(
             `Unknown album metric type: ${String(data.metricType)}`,
           );
+          return;
       }
 
       await this.albumMetricRepository.save(albumMetric);
