@@ -17,6 +17,9 @@ describe('MetricsController', () => {
     getAlbumMetrics: jest.fn(),
     addSongToAlbum: jest.fn(),
     removeSongFromAlbum: jest.fn(),
+    registerUser: jest.fn(),
+    updateUserActivity: jest.fn(),
+    getNewRegistrations: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -190,6 +193,90 @@ describe('MetricsController', () => {
       expect(mockMetricsService.removeSongFromAlbum).toHaveBeenCalledWith(
         songAlbumDto.songId,
         songAlbumDto.albumId,
+      );
+    });
+  });
+
+  describe('registerUser', () => {
+    it('should register a user successfully', async () => {
+      const userRegistrationDto = {
+        userId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        email: 'user@example.com',
+      };
+      const result = {
+        message: 'User registered successfully',
+        userId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+      };
+      mockMetricsService.registerUser.mockResolvedValue(result);
+
+      expect(await controller.registerUser(userRegistrationDto)).toBe(result);
+      expect(mockMetricsService.registerUser).toHaveBeenCalledWith(
+        userRegistrationDto.userId,
+        userRegistrationDto.email,
+      );
+    });
+  });
+
+  describe('updateUserActivity', () => {
+    it('should update user activity successfully', async () => {
+      const userId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+      const result = { message: 'User activity updated' };
+      mockMetricsService.updateUserActivity.mockResolvedValue(result);
+
+      expect(await controller.updateUserActivity(userId)).toBe(result);
+      expect(mockMetricsService.updateUserActivity).toHaveBeenCalledWith(
+        userId,
+      );
+    });
+  });
+
+  describe('getNewRegistrations', () => {
+    it('should get new registrations successfully', async () => {
+      const result = {
+        totalRegistrations: 2,
+        users: [
+          {
+            userId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+            email: 'user1@example.com',
+            registrationDate: new Date(),
+          },
+          {
+            userId: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+            email: 'user2@example.com',
+            registrationDate: new Date(),
+          },
+        ],
+      };
+      mockMetricsService.getNewRegistrations.mockResolvedValue(result);
+
+      expect(await controller.getNewRegistrations()).toBe(result);
+      expect(mockMetricsService.getNewRegistrations).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+      );
+    });
+
+    it('should get new registrations with date filters', async () => {
+      const startDate = '2024-01-01';
+      const endDate = '2024-01-31';
+      const result = {
+        totalRegistrations: 1,
+        users: [
+          {
+            userId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+            email: 'user1@example.com',
+            registrationDate: new Date(),
+          },
+        ],
+      };
+      mockMetricsService.getNewRegistrations.mockResolvedValue(result);
+
+      expect(await controller.getNewRegistrations(startDate, endDate)).toBe(
+        result,
+      );
+      expect(mockMetricsService.getNewRegistrations).toHaveBeenCalledWith(
+        new Date(startDate),
+        new Date(endDate),
       );
     });
   });

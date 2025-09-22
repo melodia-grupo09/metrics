@@ -6,9 +6,11 @@ import {
   Param,
   Delete,
   ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import { MetricsService } from './metrics.service';
 import { SongAlbumDto } from './dto/song-album.dto';
+import { UserRegistrationDto } from './dto/user-registration.dto';
 import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('metrics')
@@ -137,5 +139,47 @@ export class MetricsController {
       songAlbumDto.songId,
       songAlbumDto.albumId,
     );
+  }
+
+  // User metrics endpoints
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiBody({ type: UserRegistrationDto })
+  @ApiResponse({
+    status: 201,
+    description: 'User registered successfully',
+  })
+  @ApiResponse({ status: 400, description: 'User already registered' })
+  @Post('users/register')
+  async registerUser(@Body() userRegistrationDto: UserRegistrationDto) {
+    return this.metricsService.registerUser(
+      userRegistrationDto.userId,
+      userRegistrationDto.email,
+    );
+  }
+
+  @ApiOperation({ summary: 'Update user activity' })
+  @ApiResponse({
+    status: 200,
+    description: 'User activity updated successfully',
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @Post('users/:userId/activity')
+  async updateUserActivity(@Param('userId', ParseUUIDPipe) userId: string) {
+    return this.metricsService.updateUserActivity(userId);
+  }
+
+  @ApiOperation({ summary: 'Get new user registrations' })
+  @ApiResponse({
+    status: 200,
+    description: 'New registrations retrieved successfully',
+  })
+  @Get('users/registrations')
+  async getNewRegistrations(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+    return this.metricsService.getNewRegistrations(start, end);
   }
 }

@@ -4,6 +4,7 @@ import { MetricsService } from './metrics.service';
 import { SongMetric } from './entities/song-metric.entity';
 import { AlbumMetric } from './entities/album-metric.entity';
 import { SongAlbum } from './entities/song-album.entity';
+import { UserMetric } from './entities/user-metric.entity';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 describe('MetricsService', () => {
@@ -14,6 +15,8 @@ describe('MetricsService', () => {
     find: jest.fn(),
     save: jest.fn(),
     delete: jest.fn(),
+    create: jest.fn(),
+    createQueryBuilder: jest.fn(),
   };
 
   const mockRabbitClient = {
@@ -34,6 +37,10 @@ describe('MetricsService', () => {
         },
         {
           provide: getRepositoryToken(SongAlbum),
+          useValue: mockRepository,
+        },
+        {
+          provide: getRepositoryToken(UserMetric),
           useValue: mockRepository,
         },
         {
@@ -219,6 +226,151 @@ describe('MetricsService', () => {
 
       await expect(service.addSongToAlbum(songId, albumId)).rejects.toThrow(
         BadRequestException,
+      );
+    });
+  });
+
+  describe('registerUser', () => {
+    it('should register a new user successfully', async () => {
+      const userId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+      const email = 'user@example.com';
+      mockRepository.findOne.mockResolvedValue(null);
+      mockRepository.create.mockReturnValue({
+        userId,
+        email,
+        registrationDate: new Date(),
+        lastActiveDate: new Date(),
+      });
+      mockRepository.save.mockResolvedValue({});
+
+      const result = await service.registerUser(userId, email);
+
+      expect(result).toEqual({
+        message: 'User registered successfully',
+        userId,
+      });
+      expect(mockRepository.findOne).toHaveBeenCalledWith({
+        where: { userId },
+      });
+      expect(mockRepository.save).toHaveBeenCalled();
+      expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.user', {
+        userId,
+        email,
+        metricType: 'registration',
+        timestamp: expect.any(Date) as Date,
+      });
+    });
+
+    it('should throw BadRequestException if user already exists', async () => {
+      const userId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+      const email = 'user@example.com';
+      mockRepository.findOne.mockResolvedValue({ userId });
+
+      await expect(service.registerUser(userId, email)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
+  describe('updateUserActivity', () => {
+    it('should update user activity successfully', async () => {
+      const userId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+      const userMetric = {
+        userId,
+        lastActiveDate: new Date(),
+      };
+      mockRepository.findOne.mockResolvedValue(userMetric);
+      mockRepository.save.mockResolvedValue(userMetric);
+
+      const result = await service.updateUserActivity(userId);
+
+      expect(result).toEqual({
+        message: 'User activity updated',
+      });
+      expect(mockRepository.save).toHaveBeenCalled();
+      expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.user', {
+        userId,
+        metricType: 'activity',
+        timestamp: expect.any(Date) as Date,
+      });
+    });
+
+    it('should throw NotFoundException if user does not exist', async () => {
+      const userId = '550e8400-e29b-41d4-a716-446655440000';
+      mockRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.updateUserActivity(userId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('getNewRegistrations', () => {
+    it('should return new registrations successfully', async () => {
+      const mockUsers = [
+        {
+          userId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+          email: 'user1@example.com',
+          registrationDate: new Date(),
+        },
+        {
+          userId: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+          email: 'user2@example.com',
+          registrationDate: new Date(),
+        },
+      ];
+
+      const mockQueryBuilder = {
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(mockUsers),
+      };
+
+      mockRepository.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
+
+      const result = await service.getNewRegistrations();
+
+      expect(result).toEqual({
+        totalRegistrations: 2,
+        users: mockUsers.map((user) => ({
+          userId: user.userId,
+          email: user.email,
+          registrationDate: user.registrationDate,
+        })),
+      });
+    });
+
+    it('should return filtered registrations with date range', async () => {
+      const startDate = new Date('2024-01-01');
+      const endDate = new Date('2024-01-31');
+      const mockUsers = [
+        {
+          userId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+          email: 'user1@example.com',
+          registrationDate: new Date('2024-01-15'),
+        },
+      ];
+
+      const mockQueryBuilder = {
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(mockUsers),
+      };
+
+      mockRepository.createQueryBuilder = jest
+        .fn()
+        .mockReturnValue(mockQueryBuilder);
+
+      const result = await service.getNewRegistrations(startDate, endDate);
+
+      expect(result.totalRegistrations).toBe(1);
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'user.registrationDate >= :startDate',
+        { startDate },
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'user.registrationDate <= :endDate',
+        { endDate },
       );
     });
   });
