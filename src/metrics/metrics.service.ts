@@ -1,4 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
@@ -18,26 +23,73 @@ export class MetricsService {
     private songAlbumRepository: Repository<SongAlbum>,
   ) {}
 
+  private async songExists(songId: string): Promise<boolean> {
+    const metric = await this.songMetricRepository.findOne({
+      where: { songId },
+    });
+
+    return metric !== null;
+  }
+
+  // Song creation method
+  async createSong(songId: string) {
+    const existingMetric = await this.songMetricRepository.findOne({
+      where: { songId },
+    });
+
+    if (existingMetric) {
+      throw new BadRequestException('Song already exists');
+    }
+
+    const songMetric = new SongMetric();
+    songMetric.songId = songId;
+    songMetric.plays = 0;
+    songMetric.likes = 0;
+    songMetric.shares = 0;
+
+    await this.songMetricRepository.save(songMetric);
+
+    return {
+      message: 'Song created successfully',
+      songId,
+    };
+  }
+
   // Song related methods
-  incrementSongPlays(songId: string) {
+  async incrementSongPlays(songId: string) {
+    const exists = await this.songExists(songId);
+    if (!exists) {
+      throw new NotFoundException('Song not found');
+    }
+
     const data = { songId, metricType: 'play', timestamp: new Date() };
     this.rabbitClient.emit('metrics.song', data);
 
-    return { success: true, message: 'Song play recorded' };
+    return { message: 'Song play recorded' };
   }
 
-  incrementSongLikes(songId: string) {
+  async incrementSongLikes(songId: string) {
+    const exists = await this.songExists(songId);
+    if (!exists) {
+      throw new NotFoundException('Song not found');
+    }
+
     const data = { songId, metricType: 'like', timestamp: new Date() };
     this.rabbitClient.emit('metrics.song', data);
 
-    return { success: true, message: 'Song like recorded' };
+    return { message: 'Song like recorded' };
   }
 
-  incrementSongShares(songId: string) {
+  async incrementSongShares(songId: string) {
+    const exists = await this.songExists(songId);
+    if (!exists) {
+      throw new NotFoundException('Song not found');
+    }
+
     const data = { songId, metricType: 'share', timestamp: new Date() };
     this.rabbitClient.emit('metrics.song', data);
 
-    return { success: true, message: 'Song share recorded' };
+    return { message: 'Song share recorded' };
   }
 
   async getSongMetrics(songId: string) {
@@ -46,12 +98,7 @@ export class MetricsService {
     });
 
     if (!metrics) {
-      return {
-        songId,
-        plays: 0,
-        likes: 0,
-        shares: 0,
-      };
+      throw new NotFoundException('Song not found');
     }
 
     return {
@@ -63,21 +110,72 @@ export class MetricsService {
   }
 
   // Album related methods
-  incrementAlbumLikes(albumId: string) {
+  async createAlbum(albumId: string) {
+    const existingMetric = await this.albumMetricRepository.findOne({
+      where: { albumId },
+    });
+
+    if (existingMetric) {
+      throw new BadRequestException('Album already exists');
+    }
+
+    const albumMetric = new AlbumMetric();
+    albumMetric.albumId = albumId;
+    albumMetric.likes = 0;
+    albumMetric.shares = 0;
+
+    await this.albumMetricRepository.save(albumMetric);
+
+    return {
+      message: 'Album created successfully',
+      albumId,
+    };
+  }
+
+  async incrementAlbumLikes(albumId: string) {
+    const exists = await this.albumExists(albumId);
+    if (!exists) {
+      throw new NotFoundException('Album not found');
+    }
+
     const data = { albumId, metricType: 'like', timestamp: new Date() };
     this.rabbitClient.emit('metrics.album', data);
 
-    return { success: true, message: 'Album like recorded' };
+    return { message: 'Album like recorded' };
   }
 
-  incrementAlbumShares(albumId: string) {
+  async incrementAlbumShares(albumId: string) {
+    const exists = await this.albumExists(albumId);
+    if (!exists) {
+      throw new NotFoundException('Album not found');
+    }
+
     const data = { albumId, metricType: 'share', timestamp: new Date() };
     this.rabbitClient.emit('metrics.album', data);
 
-    return { success: true, message: 'Album share recorded' };
+    return { message: 'Album share recorded' };
+  }
+
+  // Helper method to check if an album exists
+  private async albumExists(albumId: string): Promise<boolean> {
+    const metric = await this.albumMetricRepository.findOne({
+      where: { albumId },
+    });
+
+    // Also check song-album relations
+    const relation = await this.songAlbumRepository.findOne({
+      where: { albumId },
+    });
+
+    return metric !== null || relation !== null;
   }
 
   async getAlbumMetrics(albumId: string) {
+    const exists = await this.albumExists(albumId);
+    if (!exists) {
+      throw new NotFoundException('Album not found');
+    }
+
     const albumMetrics = await this.albumMetricRepository.findOne({
       where: { albumId },
     });
@@ -117,15 +215,22 @@ export class MetricsService {
 
   // Song-Album relation methods
   async addSongToAlbum(songId: string, albumId: string) {
+    const songExists = await this.songExists(songId);
+    if (!songExists) {
+      throw new NotFoundException('Song not found');
+    }
+
+    const albumExists = await this.albumExists(albumId);
+    if (!albumExists) {
+      throw new NotFoundException('Album not found');
+    }
+
     const existingRelation = await this.songAlbumRepository.findOne({
       where: { songId, albumId },
     });
 
     if (existingRelation) {
-      return {
-        success: false,
-        message: 'This song is already in the album',
-      };
+      throw new BadRequestException('This song is already in the album');
     }
 
     const songAlbum = new SongAlbum();
@@ -135,26 +240,31 @@ export class MetricsService {
     await this.songAlbumRepository.save(songAlbum);
 
     return {
-      success: true,
       message: 'Song added to album successfully',
     };
   }
 
   async removeSongFromAlbum(songId: string, albumId: string) {
+    const songExists = await this.songExists(songId);
+    if (!songExists) {
+      throw new NotFoundException('Song not found');
+    }
+
+    const albumExists = await this.albumExists(albumId);
+    if (!albumExists) {
+      throw new NotFoundException('Album not found');
+    }
+
     const result = await this.songAlbumRepository.delete({
       songId,
       albumId,
     });
 
     if (result.affected === 0) {
-      return {
-        success: false,
-        message: 'Relation not found',
-      };
+      throw new NotFoundException('Relation not found');
     }
 
     return {
-      success: true,
       message: 'Song removed from album successfully',
     };
   }
