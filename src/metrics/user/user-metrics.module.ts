@@ -9,6 +9,6 @@ import { RabbitModule } from '../../rabbit/rabbit.module';
   imports: [TypeOrmModule.forFeature([UserMetric]), RabbitModule],
   controllers: [UserMetricsController],
   providers: [UserMetricsService],
-  exports: [UserMetricsService],
+  exports: [UserMetricsService, TypeOrmModule], // Export TypeOrmModule so parent module can inject repositories
 })
 export class UserMetricsModule {}
