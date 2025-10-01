@@ -1,21 +1,36 @@
 import {
-  Inject,
   Injectable,
   NotFoundException,
   BadRequestException,
+  OnModuleInit,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { ClientProxy } from '@nestjs/microservices';
+import amqp, { ChannelWrapper } from 'amqp-connection-manager';
+import { ConfirmChannel } from 'amqplib';
 import { SongMetric } from '../entities/song-metric.entity';
 
 @Injectable()
-export class SongMetricsService {
+export class SongMetricsService implements OnModuleInit {
+  private channelWrapper: ChannelWrapper;
+  private readonly logger = new Logger(SongMetricsService.name);
+
   constructor(
     @InjectModel(SongMetric.name)
     private songMetricModel: Model<SongMetric>,
-    @Inject('METRICS_SERVICE') private readonly rabbitClient: ClientProxy,
-  ) {}
+  ) {
+    const connection = amqp.connect(['amqp://localhost:5672']);
+    this.channelWrapper = connection.createChannel();
+  }
+
+  async onModuleInit() {
+    await this.channelWrapper.addSetup(async (channel: ConfirmChannel) => {
+      await channel.assertExchange('metrics_exchange', 'topic', {
+        durable: true,
+      });
+    });
+  }
 
   private async songExists(songId: string): Promise<boolean> {
     const metric = await this.songMetricModel.findOne({ songId }).exec();
@@ -53,7 +68,12 @@ export class SongMetricsService {
     }
 
     const data = { songId, metricType: 'play', timestamp: new Date() };
-    this.rabbitClient.emit('metrics.song.play', data);
+
+    await this.channelWrapper.publish(
+      'metrics_exchange',
+      'metrics.song.play',
+      Buffer.from(JSON.stringify(data)),
+    );
 
     return { message: 'Song play recorded' };
   }
@@ -65,7 +85,12 @@ export class SongMetricsService {
     }
 
     const data = { songId, metricType: 'like', timestamp: new Date() };
-    this.rabbitClient.emit('metrics.song.like', data);
+
+    await this.channelWrapper.publish(
+      'metrics_exchange',
+      'metrics.song.like',
+      Buffer.from(JSON.stringify(data)),
+    );
 
     return { message: 'Song like recorded' };
   }
@@ -77,7 +102,12 @@ export class SongMetricsService {
     }
 
     const data = { songId, metricType: 'share', timestamp: new Date() };
-    this.rabbitClient.emit('metrics.song.share', data);
+
+    await this.channelWrapper.publish(
+      'metrics_exchange',
+      'metrics.song.share',
+      Buffer.from(JSON.stringify(data)),
+    );
 
     return { message: 'Song share recorded' };
   }

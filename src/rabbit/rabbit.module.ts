@@ -14,6 +14,8 @@ import { Transport } from '@nestjs/microservices/enums/transport.enum';
           queueOptions: {
             durable: true,
           },
+          exchange: 'metrics_exchange',
+          exchangeType: 'topic',
           noAssert: false,
         },
       },

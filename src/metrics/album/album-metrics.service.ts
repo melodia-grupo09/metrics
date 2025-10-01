@@ -1,24 +1,39 @@
 import {
-  Inject,
   Injectable,
   NotFoundException,
   BadRequestException,
+  OnModuleInit,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { ClientProxy } from '@nestjs/microservices';
+import amqp, { ChannelWrapper } from 'amqp-connection-manager';
+import { ConfirmChannel } from 'amqplib';
 import { AlbumMetric } from '../entities/album-metric.entity';
 import { SongMetric } from '../entities/song-metric.entity';
 
 @Injectable()
-export class AlbumMetricsService {
+export class AlbumMetricsService implements OnModuleInit {
+  private channelWrapper: ChannelWrapper;
+  private readonly logger = new Logger(AlbumMetricsService.name);
+
   constructor(
-    @Inject('METRICS_SERVICE') private readonly rabbitClient: ClientProxy,
     @InjectModel(AlbumMetric.name)
     private albumMetricModel: Model<AlbumMetric>,
     @InjectModel(SongMetric.name)
     private songMetricModel: Model<SongMetric>,
-  ) {}
+  ) {
+    const connection = amqp.connect(['amqp://localhost:5672']);
+    this.channelWrapper = connection.createChannel();
+  }
+
+  async onModuleInit() {
+    await this.channelWrapper.addSetup(async (channel: ConfirmChannel) => {
+      await channel.assertExchange('metrics_exchange', 'topic', {
+        durable: true,
+      });
+    });
+  }
 
   async createAlbum(albumId: string) {
     const existingMetric = await this.albumMetricModel
@@ -50,7 +65,12 @@ export class AlbumMetricsService {
     }
 
     const data = { albumId, metricType: 'like', timestamp: new Date() };
-    this.rabbitClient.emit('metrics.album.like', data);
+
+    await this.channelWrapper.publish(
+      'metrics_exchange',
+      'metrics.album.like',
+      Buffer.from(JSON.stringify(data)),
+    );
 
     return { message: 'Album like recorded' };
   }
@@ -62,7 +82,12 @@ export class AlbumMetricsService {
     }
 
     const data = { albumId, metricType: 'share', timestamp: new Date() };
-    this.rabbitClient.emit('metrics.album.share', data);
+
+    await this.channelWrapper.publish(
+      'metrics_exchange',
+      'metrics.album.share',
+      Buffer.from(JSON.stringify(data)),
+    );
 
     return { message: 'Album share recorded' };
   }

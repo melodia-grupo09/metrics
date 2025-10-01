@@ -1,16 +1,30 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { ClientProxy } from '@nestjs/microservices';
+import amqp, { ChannelWrapper } from 'amqp-connection-manager';
+import { ConfirmChannel } from 'amqplib';
 import { UserMetric, UserEventType } from '../entities/user-metric.entity';
 
 @Injectable()
-export class UserMetricsService {
+export class UserMetricsService implements OnModuleInit {
+  private channelWrapper: ChannelWrapper;
+  private readonly logger = new Logger(UserMetricsService.name);
+
   constructor(
     @InjectModel(UserMetric.name)
     private userEventModel: Model<UserMetric>,
-    @Inject('METRICS_SERVICE') private readonly rabbitClient: ClientProxy,
-  ) {}
+  ) {
+    const connection = amqp.connect(['amqp://localhost:5672']);
+    this.channelWrapper = connection.createChannel();
+  }
+
+  async onModuleInit() {
+    await this.channelWrapper.addSetup(async (channel: ConfirmChannel) => {
+      await channel.assertExchange('metrics_exchange', 'topic', {
+        durable: true,
+      });
+    });
+  }
 
   // Simple endpoints for recording events
   async recordRegistration(userId: string, metadata?: Record<string, any>) {
@@ -23,12 +37,18 @@ export class UserMetricsService {
 
     await event.save();
 
-    this.rabbitClient.emit('metrics.user.registration', {
+    const data = {
       userId,
       eventType: UserEventType.REGISTRATION,
       metadata,
       timestamp: new Date(),
-    });
+    };
+
+    await this.channelWrapper.publish(
+      'metrics_exchange',
+      'metrics.user.registration',
+      Buffer.from(JSON.stringify(data)),
+    );
 
     return {
       message: 'User registration recorded',
@@ -46,12 +66,18 @@ export class UserMetricsService {
 
     await event.save();
 
-    this.rabbitClient.emit('metrics.user.login', {
+    const data = {
       userId,
       eventType: UserEventType.LOGIN,
       metadata,
       timestamp: new Date(),
-    });
+    };
+
+    await this.channelWrapper.publish(
+      'metrics_exchange',
+      'metrics.user.login',
+      Buffer.from(JSON.stringify(data)),
+    );
 
     return {
       message: 'User login recorded',
@@ -69,12 +95,18 @@ export class UserMetricsService {
 
     await event.save();
 
-    this.rabbitClient.emit('metrics.user.activity', {
+    const data = {
       userId,
       eventType: UserEventType.ACTIVITY,
       metadata,
       timestamp: new Date(),
-    });
+    };
+
+    await this.channelWrapper.publish(
+      'metrics_exchange',
+      'metrics.user.activity',
+      Buffer.from(JSON.stringify(data)),
+    );
 
     return {
       message: 'User activity recorded',
