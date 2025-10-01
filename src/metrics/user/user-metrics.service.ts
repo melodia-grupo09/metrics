@@ -35,7 +35,7 @@ export class UserMetricsService {
 
     await this.userMetricRepository.save(userMetric);
 
-    this.rabbitClient.emit('metrics.user', {
+    this.rabbitClient.emit('metrics.user.registration', {
       userId,
       email,
       metricType: 'registration',
@@ -60,7 +60,7 @@ export class UserMetricsService {
     userMetric.lastActiveDate = new Date();
     await this.userMetricRepository.save(userMetric);
 
-    this.rabbitClient.emit('metrics.user', {
+    this.rabbitClient.emit('metrics.user.activity', {
       userId,
       metricType: 'activity',
       timestamp: new Date(),

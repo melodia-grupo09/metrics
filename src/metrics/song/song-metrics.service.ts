@@ -55,7 +55,7 @@ export class SongMetricsService {
     }
 
     const data = { songId, metricType: 'play', timestamp: new Date() };
-    this.rabbitClient.emit('metrics.song', data);
+    this.rabbitClient.emit('metrics.song.play', data);
 
     return { message: 'Song play recorded' };
   }
@@ -67,7 +67,7 @@ export class SongMetricsService {
     }
 
     const data = { songId, metricType: 'like', timestamp: new Date() };
-    this.rabbitClient.emit('metrics.song', data);
+    this.rabbitClient.emit('metrics.song.like', data);
 
     return { message: 'Song like recorded' };
   }
@@ -79,7 +79,7 @@ export class SongMetricsService {
     }
 
     const data = { songId, metricType: 'share', timestamp: new Date() };
-    this.rabbitClient.emit('metrics.song', data);
+    this.rabbitClient.emit('metrics.song.share', data);
 
     return { message: 'Song share recorded' };
   }

@@ -50,7 +50,7 @@ export class MetricsService {
     }
 
     const data = { albumId, metricType: 'like', timestamp: new Date() };
-    this.rabbitClient.emit('metrics.album', data);
+    this.rabbitClient.emit('metrics.album.like', data);
 
     return { message: 'Album like recorded' };
   }
@@ -62,7 +62,7 @@ export class MetricsService {
     }
 
     const data = { albumId, metricType: 'share', timestamp: new Date() };
-    this.rabbitClient.emit('metrics.album', data);
+    this.rabbitClient.emit('metrics.album.share', data);
 
     return { message: 'Album share recorded' };
   }
