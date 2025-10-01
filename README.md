@@ -61,6 +61,30 @@ $ npm run test:cov
 
 The coverage link is at https://app.codecov.io/github/iregazzoli/metrics
 
+## RabbitMQ Architecture
+
+#### 1. Architecture 
+
+This project uses one queue with one exchange, with one topic and multiple routing keys, the benefits of this approach are:
+
+- **Native RabbitMQ Routing**: Leverages RabbitMQ's built-in routing capabilities rather than application-level logic
+- **Better Performance**: Message routing happens at the broker level, which is more efficient
+- **Semantic Routing Keys**: Keys like `metrics.song.play` clearly express intent and message type
+
+#### 2. **Routing Key Structure**
+
+Format: `metrics.<entity>.<action>`
+
+- **Song metrics**: `metrics.song.play`, `metrics.song.like`, `metrics.song.share`
+- **Album metrics**: `metrics.album.like`, `metrics.album.share`
+- **User metrics**: `metrics.user.registration`, `metrics.user.activity`
+
+This hierarchical structure allows for:
+
+- Pattern matching with wildcards (e.g., `metrics.song.*` matches all song events)
+- Clear separation of concerns
+- Easy debugging and monitoring
+
 ## TODO
 
 - Add a logger that connects to like New relic or smthing since it needs to "Estos logs deberán ser almacenados de tal manera que puedan ser accedidos en cualquier momento"
