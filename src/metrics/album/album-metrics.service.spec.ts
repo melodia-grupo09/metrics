@@ -5,12 +5,11 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { AlbumMetricsService } from './album-metrics.service';
 import { AlbumMetric } from '../entities/album-metric.entity';
-import { SongAlbum } from '../entities/song-album.entity';
+import { SongMetric } from '../entities/song-metric.entity';
 
 describe('AlbumMetricsService', () => {
   let service: AlbumMetricsService;
   let albumMetricRepository: Repository<AlbumMetric>;
-  let songAlbumRepository: Repository<SongAlbum>;
   let rabbitClient: ClientProxy;
 
   const mockAlbumMetricRepository = {
@@ -18,8 +17,9 @@ describe('AlbumMetricsService', () => {
     save: jest.fn(),
   };
 
-  const mockSongAlbumRepository = {
+  const mockSongMetricRepository = {
     findOne: jest.fn(),
+    createQueryBuilder: jest.fn(),
   };
 
   const mockRabbitClient = {
@@ -35,8 +35,8 @@ describe('AlbumMetricsService', () => {
           useValue: mockAlbumMetricRepository,
         },
         {
-          provide: getRepositoryToken(SongAlbum),
-          useValue: mockSongAlbumRepository,
+          provide: getRepositoryToken(SongMetric),
+          useValue: mockSongMetricRepository,
         },
         {
           provide: 'METRICS_SERVICE',
@@ -48,9 +48,6 @@ describe('AlbumMetricsService', () => {
     service = module.get<AlbumMetricsService>(AlbumMetricsService);
     albumMetricRepository = module.get<Repository<AlbumMetric>>(
       getRepositoryToken(AlbumMetric),
-    );
-    songAlbumRepository = module.get<Repository<SongAlbum>>(
-      getRepositoryToken(SongAlbum),
     );
     rabbitClient = module.get<ClientProxy>('METRICS_SERVICE');
   });
@@ -130,7 +127,6 @@ describe('AlbumMetricsService', () => {
     it('should throw NotFoundException if album does not exist', async () => {
       const albumId = '123e4567-e89b-12d3-a456-426614174000';
       mockAlbumMetricRepository.findOne.mockResolvedValue(null);
-      mockSongAlbumRepository.findOne.mockResolvedValue(null);
 
       await expect(service.incrementAlbumLikes(albumId)).rejects.toThrow(
         NotFoundException,
@@ -164,7 +160,6 @@ describe('AlbumMetricsService', () => {
     it('should throw NotFoundException if album does not exist', async () => {
       const albumId = '123e4567-e89b-12d3-a456-426614174000';
       mockAlbumMetricRepository.findOne.mockResolvedValue(null);
-      mockSongAlbumRepository.findOne.mockResolvedValue(null);
 
       await expect(service.incrementAlbumShares(albumId)).rejects.toThrow(
         NotFoundException,
@@ -174,7 +169,44 @@ describe('AlbumMetricsService', () => {
   });
 
   describe('getAlbumMetrics', () => {
-    it('should return album metrics successfully', async () => {
+    it('should return album metrics with calculated plays from songIds', async () => {
+      const albumId = '123e4567-e89b-12d3-a456-426614174000';
+      const songIds = ['song1-uuid', 'song2-uuid'];
+      const mockMetrics = {
+        id: 'some-id',
+        albumId,
+        likes: 10,
+        shares: 5,
+      };
+
+      mockAlbumMetricRepository.findOne.mockResolvedValue(mockMetrics);
+
+      const mockQueryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ total: '150' }),
+      };
+      mockSongMetricRepository.createQueryBuilder.mockReturnValue(
+        mockQueryBuilder,
+      );
+
+      const result = await service.getAlbumMetrics(albumId, songIds);
+
+      expect(result).toEqual({
+        albumId,
+        plays: 150,
+        likes: 10,
+        shares: 5,
+      });
+      expect(albumMetricRepository.findOne).toHaveBeenCalledWith({
+        where: { albumId },
+      });
+      expect(mockSongMetricRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'song',
+      );
+    });
+
+    it('should return album metrics with 0 plays when no songIds provided', async () => {
       const albumId = '123e4567-e89b-12d3-a456-426614174000';
       const mockMetrics = {
         id: 'some-id',
@@ -188,11 +220,9 @@ describe('AlbumMetricsService', () => {
 
       expect(result).toEqual({
         albumId,
+        plays: 0,
         likes: 10,
         shares: 5,
-      });
-      expect(albumMetricRepository.findOne).toHaveBeenCalledWith({
-        where: { albumId },
       });
     });
 

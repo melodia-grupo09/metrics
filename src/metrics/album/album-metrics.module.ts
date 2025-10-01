@@ -3,11 +3,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AlbumMetricsController } from './album-metrics.controller';
 import { AlbumMetricsService } from './album-metrics.service';
 import { AlbumMetric } from '../entities/album-metric.entity';
-import { SongAlbum } from '../entities/song-album.entity';
+import { SongMetric } from '../entities/song-metric.entity';
 import { RabbitModule } from '../../rabbit/rabbit.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AlbumMetric, SongAlbum]), RabbitModule],
+  imports: [TypeOrmModule.forFeature([AlbumMetric, SongMetric]), RabbitModule],
   controllers: [AlbumMetricsController],
   providers: [AlbumMetricsService],
   exports: [AlbumMetricsService, TypeOrmModule],

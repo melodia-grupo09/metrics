@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
 import { AlbumMetric } from '../entities/album-metric.entity';
-import { SongAlbum } from '../entities/song-album.entity';
+import { SongMetric } from '../entities/song-metric.entity';
 
 @Injectable()
 export class AlbumMetricsService {
@@ -16,8 +16,8 @@ export class AlbumMetricsService {
     @Inject('METRICS_SERVICE') private readonly rabbitClient: ClientProxy,
     @InjectRepository(AlbumMetric)
     private albumMetricRepository: Repository<AlbumMetric>,
-    @InjectRepository(SongAlbum)
-    private songAlbumRepository: Repository<SongAlbum>,
+    @InjectRepository(SongMetric)
+    private songMetricRepository: Repository<SongMetric>,
   ) {}
 
   async createAlbum(albumId: string) {
@@ -71,15 +71,10 @@ export class AlbumMetricsService {
       where: { albumId },
     });
 
-    // Also check song-album relations
-    const relation = await this.songAlbumRepository.findOne({
-      where: { albumId },
-    });
-
-    return metric !== null || relation !== null;
+    return metric !== null;
   }
 
-  async getAlbumMetrics(albumId: string) {
+  async getAlbumMetrics(albumId: string, songIds?: string[]) {
     const albumMetrics = await this.albumMetricRepository.findOne({
       where: { albumId },
     });
@@ -88,8 +83,20 @@ export class AlbumMetricsService {
       throw new NotFoundException('Album not found');
     }
 
+    let totalPlays = 0;
+    if (songIds && songIds.length > 0) {
+      const result = await this.songMetricRepository
+        .createQueryBuilder('song')
+        .select('SUM(song.plays)', 'total')
+        .where('song.songId IN (:...songIds)', { songIds })
+        .getRawOne<{ total: string }>();
+
+      totalPlays = parseInt(result?.total || '0', 10);
+    }
+
     return {
       albumId: albumMetrics.albumId,
+      plays: totalPlays, // Calculated from songs
       likes: albumMetrics.likes,
       shares: albumMetrics.shares,
     };

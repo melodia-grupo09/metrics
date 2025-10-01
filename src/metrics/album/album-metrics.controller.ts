@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Param, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Post, Param, ParseUUIDPipe, Body } from '@nestjs/common';
 import { AlbumMetricsService } from './album-metrics.service';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 
 @ApiTags('album-metrics')
 @Controller('metrics/albums')
@@ -14,7 +14,7 @@ export class AlbumMetricsController {
   })
   @ApiResponse({ status: 400, description: 'Album already exists' })
   @Post(':albumId')
-  async createAlbum(@Param('albumId', ParseUUIDPipe) albumId: string) {
+  createAlbum(@Param('albumId', ParseUUIDPipe) albumId: string) {
     return this.albumMetricsService.createAlbum(albumId);
   }
 
@@ -22,7 +22,7 @@ export class AlbumMetricsController {
   @ApiResponse({ status: 200, description: 'Album like recorded successfully' })
   @ApiResponse({ status: 404, description: 'Album not found' })
   @Post(':albumId/likes')
-  async incrementAlbumLikes(@Param('albumId', ParseUUIDPipe) albumId: string) {
+  incrementAlbumLikes(@Param('albumId', ParseUUIDPipe) albumId: string) {
     return this.albumMetricsService.incrementAlbumLikes(albumId);
   }
 
@@ -33,15 +33,35 @@ export class AlbumMetricsController {
   })
   @ApiResponse({ status: 404, description: 'Album not found' })
   @Post(':albumId/shares')
-  async incrementAlbumShares(@Param('albumId', ParseUUIDPipe) albumId: string) {
+  incrementAlbumShares(@Param('albumId', ParseUUIDPipe) albumId: string) {
     return this.albumMetricsService.incrementAlbumShares(albumId);
   }
 
   @ApiOperation({ summary: 'Get album metrics' })
   @ApiResponse({ status: 200, description: 'Metrics retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Album not found' })
-  @Get(':albumId')
-  async getAlbumMetrics(@Param('albumId', ParseUUIDPipe) albumId: string) {
-    return this.albumMetricsService.getAlbumMetrics(albumId);
+  @ApiBody({
+    description: 'Optional array of song IDs to calculate total plays',
+    required: false,
+    schema: {
+      type: 'object',
+      properties: {
+        songIds: {
+          type: 'array',
+          items: { type: 'string', format: 'uuid' },
+          example: [
+            'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+            '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+          ],
+        },
+      },
+    },
+  })
+  @Post(':albumId/metrics')
+  async getAlbumMetrics(
+    @Param('albumId', ParseUUIDPipe) albumId: string,
+    @Body('songIds') songIds?: string[],
+  ) {
+    return await this.albumMetricsService.getAlbumMetrics(albumId, songIds);
   }
 }
