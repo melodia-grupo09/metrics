@@ -5,7 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AlbumMetric } from './entities/album-metric.entity';
 import { SongMetric } from './entities/song-metric.entity';
-import { UserMetric } from './user/user-metric.entity';
+import { UserMetric, UserEventType } from './entities/user-metric.entity';
 
 interface SongMetricEvent {
   songId: string;
@@ -19,10 +19,10 @@ interface AlbumMetricEvent {
   timestamp: Date;
 }
 
-interface UserMetricEvent {
+interface UserEventMessage {
   userId: string;
-  email?: string;
-  metricType: 'registration' | 'activity';
+  eventType: UserEventType;
+  metadata?: Record<string, any>;
   timestamp: Date;
 }
 
@@ -37,7 +37,7 @@ export class MetricsConsumer implements OnModuleInit {
     @InjectRepository(SongMetric)
     private songMetricRepository: Repository<SongMetric>,
     @InjectRepository(UserMetric)
-    private userMetricRepository: Repository<UserMetric>,
+    private userEventRepository: Repository<UserMetric>,
   ) {
     const connection = amqp.connect(['amqp://localhost:5672']);
     this.channelWrapper = connection.createChannel();
@@ -77,7 +77,7 @@ export class MetricsConsumer implements OnModuleInit {
                 } else if (routingKey.startsWith('metrics.album.')) {
                   await this.handleAlbumMetric(content as AlbumMetricEvent);
                 } else if (routingKey.startsWith('metrics.user.')) {
-                  await this.handleUserMetric(content as UserMetricEvent);
+                  await this.handleUserEvent(content as UserEventMessage);
                 } else {
                   this.logger.warn(`Unknown routing key: ${routingKey}`);
                 }
@@ -146,12 +146,31 @@ export class MetricsConsumer implements OnModuleInit {
     }
   }
 
-  async handleUserMetric(eventData: UserMetricEvent): Promise<void> {
-    this.logger.log('Processing user metric:', eventData);
-    this.logger.log(
-      `User metric ${eventData.metricType} processed for user ${eventData.userId}`,
-    );
-    await Promise.resolve();
+  async handleUserEvent(eventData: UserEventMessage): Promise<void> {
+    this.logger.log('Processing user event:', eventData);
+    try {
+      if (!eventData || !eventData.userId || !eventData.eventType) {
+        this.logger.error(
+          'Invalid message format: missing userId or eventType',
+        );
+        return;
+      }
+
+      const userEvent = this.userEventRepository.create({
+        userId: eventData.userId,
+        eventType: eventData.eventType,
+        timestamp: new Date(eventData.timestamp),
+        metadata: eventData.metadata,
+      });
+
+      await this.userEventRepository.save(userEvent);
+      this.logger.log(
+        `Recorded ${eventData.eventType} event for user ${eventData.userId}`,
+      );
+    } catch (error) {
+      this.logger.error('Error processing user event:', error);
+      throw error;
+    }
   }
 
   async handleAlbumMetric(eventData: AlbumMetricEvent): Promise<void> {

@@ -6,54 +6,122 @@ import {
   Param,
   ParseUUIDPipe,
   Query,
+  ParseIntPipe,
+  DefaultValuePipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { UserMetricsService } from './user-metrics.service';
-import { UserRegistrationDto } from '../dto/user-registration.dto';
 
 @ApiTags('user-metrics')
 @Controller('metrics/users')
 export class UserMetricsController {
   constructor(private readonly userMetricsService: UserMetricsService) {}
 
-  @ApiOperation({ summary: 'Register a new user' })
-  @ApiBody({ type: UserRegistrationDto })
+  // Event recording endpoints - Simple like song metrics
+  @ApiOperation({ summary: 'Record user registration' })
   @ApiResponse({
     status: 201,
-    description: 'User registered successfully',
+    description: 'User registration recorded',
   })
-  @ApiResponse({ status: 400, description: 'User already registered' })
-  @Post('register')
-  async registerUser(@Body() userRegistrationDto: UserRegistrationDto) {
-    return this.userMetricsService.registerUser(
-      userRegistrationDto.userId,
-      userRegistrationDto.email,
+  @Post(':userId/registration')
+  recordRegistration(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() metadata?: Record<string, any>,
+  ) {
+    return this.userMetricsService.recordRegistration(userId, metadata);
+  }
+
+  @ApiOperation({ summary: 'Record user login' })
+  @ApiResponse({
+    status: 201,
+    description: 'User login recorded',
+  })
+  @Post(':userId/login')
+  recordLogin(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() metadata?: Record<string, any>,
+  ) {
+    return this.userMetricsService.recordLogin(userId, metadata);
+  }
+
+  @ApiOperation({ summary: 'Record user activity' })
+  @ApiResponse({
+    status: 201,
+    description: 'User activity recorded',
+  })
+  @Post(':userId/activity')
+  recordActivity(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() metadata?: Record<string, any>,
+  ) {
+    return this.userMetricsService.recordActivity(userId, metadata);
+  }
+
+  // Analytics endpoints - The 3 key metrics
+  @ApiOperation({ summary: 'Get new registrations (Nuevos Registros)' })
+  @ApiQuery({ name: 'startDate', required: true, example: '2024-01-01' })
+  @ApiQuery({ name: 'endDate', required: true, example: '2024-12-31' })
+  @ApiResponse({
+    status: 200,
+    description: 'New registrations count retrieved',
+  })
+  @Get('analytics/registrations')
+  getNewRegistrations(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    return this.userMetricsService.getNewRegistrations(
+      new Date(startDate),
+      new Date(endDate),
     );
   }
 
-  @ApiOperation({ summary: 'Update user activity' })
+  @ApiOperation({ summary: 'Get active users (Usuarios Activos)' })
+  @ApiQuery({ name: 'startDate', required: true, example: '2024-01-01' })
+  @ApiQuery({ name: 'endDate', required: true, example: '2024-12-31' })
   @ApiResponse({
     status: 200,
-    description: 'User activity updated successfully',
+    description: 'Active users count retrieved',
   })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  @Post(':userId/activity')
-  async updateUserActivity(@Param('userId', ParseUUIDPipe) userId: string) {
-    return this.userMetricsService.updateUserActivity(userId);
+  @Get('analytics/active')
+  getActiveUsers(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    return this.userMetricsService.getActiveUsers(
+      new Date(startDate),
+      new Date(endDate),
+    );
   }
 
-  @ApiOperation({ summary: 'Get new user registrations' })
+  @ApiOperation({ summary: 'Get user retention (Retención)' })
+  @ApiQuery({
+    name: 'cohortStartDate',
+    required: true,
+    example: '2024-01-01',
+  })
+  @ApiQuery({ name: 'cohortEndDate', required: true, example: '2024-01-31' })
+  @ApiQuery({
+    name: 'daysAfter',
+    required: false,
+    example: 7,
+    description: 'Days after registration to check retention',
+  })
   @ApiResponse({
     status: 200,
-    description: 'New registrations retrieved successfully',
+    description: 'User retention metrics retrieved',
   })
-  @Get('registrations')
-  async getNewRegistrations(
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
+  @Get('analytics/retention')
+  getUserRetention(
+    @Query('cohortStartDate') cohortStartDate: string,
+    @Query('cohortEndDate') cohortEndDate: string,
+    @Query('daysAfter', new DefaultValuePipe(7), ParseIntPipe)
+    daysAfter: number,
   ) {
-    const start = startDate ? new Date(startDate) : undefined;
-    const end = endDate ? new Date(endDate) : undefined;
-    return this.userMetricsService.getNewRegistrations(start, end);
+    return this.userMetricsService.getUserRetention(
+      new Date(cohortStartDate),
+      new Date(cohortEndDate),
+      daysAfter,
+    );
   }
 }

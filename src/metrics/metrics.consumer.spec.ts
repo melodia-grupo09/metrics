@@ -4,7 +4,7 @@ import { Logger } from '@nestjs/common';
 import { MetricsConsumer } from './metrics.consumer';
 import { AlbumMetric } from './entities/album-metric.entity';
 import { SongMetric } from './entities/song-metric.entity';
-import { UserMetric } from './user/user-metric.entity';
+import { UserMetric, UserEventType } from './entities/user-metric.entity';
 
 // Mock amqp-connection-manager to prevent actual RabbitMQ connections
 jest.mock('amqp-connection-manager', () => {
@@ -265,16 +265,16 @@ describe('MetricsConsumer', () => {
     });
   });
 
-  describe('handleUserMetric', () => {
+  describe('handleUserEvent', () => {
     it('should process user registration event', async () => {
       const eventData = {
         userId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-        email: 'test@example.com',
-        metricType: 'registration' as const,
+        eventType: UserEventType.REGISTRATION,
+        metadata: { email: 'test@example.com' },
         timestamp: new Date(),
       };
 
-      await consumer.handleUserMetric(eventData);
+      await consumer.handleUserEvent(eventData);
 
       // Should complete without error (currently just logs)
       expect(true).toBe(true);
@@ -283,11 +283,11 @@ describe('MetricsConsumer', () => {
     it('should process user activity event', async () => {
       const eventData = {
         userId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-        metricType: 'activity' as const,
+        eventType: UserEventType.ACTIVITY,
         timestamp: new Date(),
       };
 
-      await consumer.handleUserMetric(eventData);
+      await consumer.handleUserEvent(eventData);
 
       // Should complete without error (currently just logs)
       expect(true).toBe(true);

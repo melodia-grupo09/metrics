@@ -4,7 +4,7 @@ import { MetricsConsumer } from '../metrics.consumer';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AlbumMetric } from '../entities/album-metric.entity';
 import { SongMetric } from '../entities/song-metric.entity';
-import { UserMetric } from '../user/user-metric.entity';
+import { UserMetric, UserEventType } from '../entities/user-metric.entity';
 
 // Mock amqp-connection-manager to prevent actual RabbitMQ connections
 jest.mock('amqp-connection-manager', () => {
@@ -39,6 +39,7 @@ describe('RabbitMQ Consumer Coverage Tests', () => {
   const mockUserRepository = {
     findOne: jest.fn(),
     save: jest.fn(),
+    create: jest.fn(),
   };
 
   beforeAll(() => {
@@ -85,7 +86,7 @@ describe('RabbitMQ Consumer Coverage Tests', () => {
       const handlerMethods = [
         'handleSongMetric',
         'handleAlbumMetric',
-        'handleUserMetric',
+        'handleUserEvent',
       ];
 
       for (const method of handlerMethods) {
@@ -137,11 +138,16 @@ describe('RabbitMQ Consumer Coverage Tests', () => {
     it('should process user metrics without throwing errors', async () => {
       const event = {
         userId: 'test',
-        metricType: 'registration' as const,
+        eventType: UserEventType.REGISTRATION,
         timestamp: new Date(),
       };
 
-      await expect(consumer.handleUserMetric(event)).resolves.not.toThrow();
+      mockUserRepository.create.mockReturnValue(event);
+      mockUserRepository.save.mockResolvedValue(event);
+
+      await expect(consumer.handleUserEvent(event)).resolves.not.toThrow();
+      expect(mockUserRepository.create).toHaveBeenCalled();
+      expect(mockUserRepository.save).toHaveBeenCalled();
     });
 
     it('should validate that ALL service emission patterns have consumer handlers', () => {
@@ -155,7 +161,7 @@ describe('RabbitMQ Consumer Coverage Tests', () => {
       const consumerHandlers = {
         'metrics.song': 'handleSongMetric',
         'metrics.album': 'handleAlbumMetric',
-        'metrics.user': 'handleUserMetric',
+        'metrics.user': 'handleUserEvent',
       };
 
       for (const pattern of serviceEmissionPatterns) {
