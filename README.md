@@ -63,7 +63,7 @@ The coverage link is at https://app.codecov.io/github/iregazzoli/metrics
 
 ## RabbitMQ Architecture
 
-#### 1. Architecture 
+#### 1. Architecture
 
 This project uses one queue with one exchange, with one topic and multiple routing keys, the benefits of this approach are:
 
@@ -85,6 +85,44 @@ This hierarchical structure allows for:
 - Clear separation of concerns
 - Easy debugging and monitoring
 
-## TODO
+## TODO Progress
 
-- Add a logger that connects to like New relic or smthing since it needs to "Estos logs deberán ser almacenados de tal manera que puedan ser accedidos en cualquier momento"
+### Song and Album Metrics
+
+#### Song Metrics
+
+- [x] **CA1**: Song metrics (plays, likes, shares)
+  - Endpoints: `POST /song-metrics/:songId/plays`, `/likes`, `/shares`
+  - Endpoint: `GET /song-metrics/:songId` to retrieve metrics
+- [x] **CA3**: Real-time metrics updates via RabbitMQ
+
+#### Album Metrics
+
+- [x] **CA2**: Basic album metrics (likes, shares)
+  - Endpoints: `POST /metrics/:albumId/like`, `/share`
+  - Endpoint: `GET /metrics/:albumId` to retrieve metrics
+- [ ] **CA2**: Total album plays (sum of all songs in the album)
+
+### User Metrics
+
+- [x] User registration and activity tracking
+- [ ] **CA1**: Dashboard endpoints with key metrics
+- [ ] **CA2**: Metrics export (CSV/Excel)
+- [ ] **CA3**: Detailed user metrics breakdown
+
+### Artist Metrics
+
+- [ ] **CA1**: Main KPIs (monthly listeners, followers, plays, saves, shares)
+- [ ] **CA2**: Filters by period and region
+- [ ] **CA3**: Navigable breakdowns
+- [ ] **CA4**: Update timestamp and data freshness indicators
+- [ ] **CA5**: Export functionality (CSV/Excel)
+
+### Infrastructure & Cross-cutting Concerns
+
+- [ ] Timestamp tracking for last update
+- [ ] Period-based filtering (daily, weekly, monthly, custom range)
+- [ ] Region/country-based filtering
+- [ ] Song ↔ Album relationship entity
+- [ ] Aggregation and analytics queries
+- [ ] Logger integration (New Relic or similar) - logs must be stored and accessible at any time
