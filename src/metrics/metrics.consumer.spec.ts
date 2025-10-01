@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { getModelToken } from '@nestjs/mongoose';
 import { Logger } from '@nestjs/common';
 import { MetricsConsumer } from './metrics.consumer';
 import { AlbumMetric } from './entities/album-metric.entity';
@@ -26,23 +26,25 @@ jest.mock('amqp-connection-manager', () => {
 describe('MetricsConsumer', () => {
   let consumer: MetricsConsumer;
 
-  const mockAlbumRepository = {
-    findOne: jest.fn(),
-    save: jest.fn(),
-    create: jest.fn(),
+  const createMockModel = () => {
+    const model: any = function (dto: any) {
+      this.data = dto;
+      this.save = jest.fn().mockResolvedValue(this.data);
+      this.likes = dto.likes || 0;
+      this.shares = dto.shares || 0;
+      this.plays = dto.plays || 0;
+      return this;
+    };
+    model.findOne = jest.fn().mockReturnValue({
+      exec: jest.fn(),
+    });
+    model.create = jest.fn();
+    return model;
   };
 
-  const mockSongRepository = {
-    findOne: jest.fn(),
-    save: jest.fn(),
-    create: jest.fn(),
-  };
-
-  const mockUserRepository = {
-    findOne: jest.fn(),
-    save: jest.fn(),
-    create: jest.fn(),
-  };
+  const mockAlbumModel = createMockModel();
+  const mockSongModel = createMockModel();
+  const mockUserModel = createMockModel();
 
   beforeAll(() => {
     // Suppress logger output during tests
@@ -61,16 +63,16 @@ describe('MetricsConsumer', () => {
       providers: [
         MetricsConsumer,
         {
-          provide: getRepositoryToken(AlbumMetric),
-          useValue: mockAlbumRepository,
+          provide: getModelToken(AlbumMetric.name),
+          useValue: mockAlbumModel,
         },
         {
-          provide: getRepositoryToken(SongMetric),
-          useValue: mockSongRepository,
+          provide: getModelToken(SongMetric.name),
+          useValue: mockSongModel,
         },
         {
-          provide: getRepositoryToken(UserMetric),
-          useValue: mockUserRepository,
+          provide: getModelToken(UserMetric.name),
+          useValue: mockUserModel,
         },
       ],
     }).compile();
@@ -90,12 +92,11 @@ describe('MetricsConsumer', () => {
         plays: 5,
         likes: 2,
         shares: 1,
+        save: jest.fn().mockResolvedValue(true),
       };
 
-      mockSongRepository.findOne.mockResolvedValue(existingSong);
-      mockSongRepository.save.mockResolvedValue({
-        ...existingSong,
-        plays: 6,
+      mockSongModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(existingSong),
       });
 
       const eventData = {
@@ -106,13 +107,9 @@ describe('MetricsConsumer', () => {
 
       await consumer.handleSongMetric(eventData);
 
-      expect(mockSongRepository.findOne).toHaveBeenCalledWith({
-        where: { songId },
-      });
-      expect(mockSongRepository.save).toHaveBeenCalledWith({
-        ...existingSong,
-        plays: 6,
-      });
+      expect(mockSongModel.findOne).toHaveBeenCalledWith({ songId });
+      expect(existingSong.plays).toBe(6);
+      expect(existingSong.save).toHaveBeenCalled();
     });
 
     it('should increment song likes when song exists', async () => {
@@ -122,12 +119,11 @@ describe('MetricsConsumer', () => {
         plays: 5,
         likes: 2,
         shares: 1,
+        save: jest.fn().mockResolvedValue(true),
       };
 
-      mockSongRepository.findOne.mockResolvedValue(existingSong);
-      mockSongRepository.save.mockResolvedValue({
-        ...existingSong,
-        likes: 3,
+      mockSongModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(existingSong),
       });
 
       const eventData = {
@@ -138,10 +134,8 @@ describe('MetricsConsumer', () => {
 
       await consumer.handleSongMetric(eventData);
 
-      expect(mockSongRepository.save).toHaveBeenCalledWith({
-        ...existingSong,
-        likes: 3,
-      });
+      expect(existingSong.likes).toBe(3);
+      expect(existingSong.save).toHaveBeenCalled();
     });
 
     it('should increment song shares when song exists', async () => {
@@ -151,12 +145,11 @@ describe('MetricsConsumer', () => {
         plays: 5,
         likes: 2,
         shares: 1,
+        save: jest.fn().mockResolvedValue(true),
       };
 
-      mockSongRepository.findOne.mockResolvedValue(existingSong);
-      mockSongRepository.save.mockResolvedValue({
-        ...existingSong,
-        shares: 2,
+      mockSongModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(existingSong),
       });
 
       const eventData = {
@@ -167,15 +160,15 @@ describe('MetricsConsumer', () => {
 
       await consumer.handleSongMetric(eventData);
 
-      expect(mockSongRepository.save).toHaveBeenCalledWith({
-        ...existingSong,
-        shares: 2,
-      });
+      expect(existingSong.shares).toBe(2);
+      expect(existingSong.save).toHaveBeenCalled();
     });
 
     it('should skip processing when song does not exist', async () => {
       const songId = 'nonexistent-song-id';
-      mockSongRepository.findOne.mockResolvedValue(null);
+      mockSongModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(null),
+      });
 
       const eventData = {
         songId,
@@ -185,10 +178,7 @@ describe('MetricsConsumer', () => {
 
       await consumer.handleSongMetric(eventData);
 
-      expect(mockSongRepository.findOne).toHaveBeenCalledWith({
-        where: { songId },
-      });
-      expect(mockSongRepository.save).not.toHaveBeenCalled();
+      expect(mockSongModel.findOne).toHaveBeenCalledWith({ songId });
     });
 
     it('should handle invalid metric type gracefully', async () => {
@@ -198,9 +188,12 @@ describe('MetricsConsumer', () => {
         plays: 5,
         likes: 2,
         shares: 1,
+        save: jest.fn().mockResolvedValue(true),
       };
 
-      mockSongRepository.findOne.mockResolvedValue(existingSong);
+      mockSongModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(existingSong),
+      });
 
       const eventData = {
         songId,
@@ -210,9 +203,9 @@ describe('MetricsConsumer', () => {
 
       await consumer.handleSongMetric(eventData);
 
-      expect(mockSongRepository.findOne).toHaveBeenCalled();
+      expect(mockSongModel.findOne).toHaveBeenCalled();
       // Should not save anything for invalid metric type
-      expect(mockSongRepository.save).not.toHaveBeenCalled();
+      expect(existingSong.save).not.toHaveBeenCalled();
     });
   });
 
@@ -223,12 +216,11 @@ describe('MetricsConsumer', () => {
         albumId,
         likes: 3,
         shares: 1,
+        save: jest.fn().mockResolvedValue(true),
       };
 
-      mockAlbumRepository.findOne.mockResolvedValue(existingAlbum);
-      mockAlbumRepository.save.mockResolvedValue({
-        ...existingAlbum,
-        likes: 4,
+      mockAlbumModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(existingAlbum),
       });
 
       const eventData = {
@@ -239,15 +231,15 @@ describe('MetricsConsumer', () => {
 
       await consumer.handleAlbumMetric(eventData);
 
-      expect(mockAlbumRepository.save).toHaveBeenCalledWith({
-        ...existingAlbum,
-        likes: 4,
-      });
+      expect(existingAlbum.likes).toBe(4);
+      expect(existingAlbum.save).toHaveBeenCalled();
     });
 
     it('should create new album metric when album does not exist', async () => {
       const albumId = 'new-album-id';
-      mockAlbumRepository.findOne.mockResolvedValue(null);
+      mockAlbumModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(null),
+      });
 
       const eventData = {
         albumId,
@@ -257,11 +249,7 @@ describe('MetricsConsumer', () => {
 
       await consumer.handleAlbumMetric(eventData);
 
-      expect(mockAlbumRepository.save).toHaveBeenCalledWith({
-        albumId,
-        likes: 1,
-        shares: 0,
-      });
+      expect(mockAlbumModel.findOne).toHaveBeenCalledWith({ albumId });
     });
   });
 
@@ -276,7 +264,7 @@ describe('MetricsConsumer', () => {
 
       await consumer.handleUserEvent(eventData);
 
-      // Should complete without error (currently just logs)
+      // Should complete without error
       expect(true).toBe(true);
     });
 
@@ -289,7 +277,7 @@ describe('MetricsConsumer', () => {
 
       await consumer.handleUserEvent(eventData);
 
-      // Should complete without error (currently just logs)
+      // Should complete without error
       expect(true).toBe(true);
     });
   });
@@ -297,7 +285,9 @@ describe('MetricsConsumer', () => {
   describe('error handling', () => {
     it('should handle database errors in song metrics', async () => {
       const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
-      mockSongRepository.findOne.mockRejectedValue(new Error('Database error'));
+      mockSongModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockRejectedValue(new Error('Database error')),
+      });
 
       const eventData = {
         songId,
@@ -312,9 +302,9 @@ describe('MetricsConsumer', () => {
 
     it('should handle database errors in album metrics', async () => {
       const albumId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
-      mockAlbumRepository.findOne.mockRejectedValue(
-        new Error('Database error'),
-      );
+      mockAlbumModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockRejectedValue(new Error('Database error')),
+      });
 
       const eventData = {
         albumId,

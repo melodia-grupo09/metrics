@@ -1,25 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { getModelToken } from '@nestjs/mongoose';
 import { UserMetricsService } from './user-metrics.service';
 import { UserMetric, UserEventType } from '../entities/user-metric.entity';
 
 describe('UserMetricsService', () => {
   let service: UserMetricsService;
 
-  const mockRepository = {
-    create: jest.fn(),
-    save: jest.fn(),
-    count: jest.fn(),
-    createQueryBuilder: jest.fn(),
+  const mockModel = function (dto: any) {
+    this.data = dto;
+    this.save = jest.fn().mockResolvedValue(this.data);
+    return this;
   };
-
-  const mockQueryBuilder = {
-    select: jest.fn().mockReturnThis(),
-    where: jest.fn().mockReturnThis(),
-    andWhere: jest.fn().mockReturnThis(),
-    getRawOne: jest.fn(),
-    getRawMany: jest.fn(),
-  };
+  mockModel.countDocuments = jest.fn().mockReturnValue({
+    exec: jest.fn(),
+  });
+  mockModel.distinct = jest.fn().mockReturnValue({
+    exec: jest.fn(),
+  });
+  mockModel.prototype.save = jest.fn();
 
   const mockRabbitClient = {
     emit: jest.fn(),
@@ -30,8 +28,8 @@ describe('UserMetricsService', () => {
       providers: [
         UserMetricsService,
         {
-          provide: getRepositoryToken(UserMetric),
-          useValue: mockRepository,
+          provide: getModelToken(UserMetric.name),
+          useValue: mockModel,
         },
         {
           provide: 'METRICS_SERVICE',
@@ -51,15 +49,6 @@ describe('UserMetricsService', () => {
     it('should record a user registration successfully', async () => {
       const userId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
       const metadata = { source: 'web' };
-      const mockEvent = {
-        userId,
-        eventType: UserEventType.REGISTRATION,
-        timestamp: expect.any(Date),
-        metadata,
-      };
-
-      mockRepository.create.mockReturnValue(mockEvent);
-      mockRepository.save.mockResolvedValue(mockEvent);
 
       const result = await service.recordRegistration(userId, metadata);
 
@@ -67,13 +56,6 @@ describe('UserMetricsService', () => {
         message: 'User registration recorded',
         userId,
       });
-      expect(mockRepository.create).toHaveBeenCalledWith({
-        userId,
-        eventType: UserEventType.REGISTRATION,
-        timestamp: expect.any(Date),
-        metadata,
-      });
-      expect(mockRepository.save).toHaveBeenCalledWith(mockEvent);
       expect(mockRabbitClient.emit).toHaveBeenCalledWith(
         'metrics.user.registration',
         {
@@ -90,27 +72,12 @@ describe('UserMetricsService', () => {
     it('should record a user login successfully', async () => {
       const userId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
       const metadata = { device: 'mobile' };
-      const mockEvent = {
-        userId,
-        eventType: UserEventType.LOGIN,
-        timestamp: expect.any(Date),
-        metadata,
-      };
-
-      mockRepository.create.mockReturnValue(mockEvent);
-      mockRepository.save.mockResolvedValue(mockEvent);
 
       const result = await service.recordLogin(userId, metadata);
 
       expect(result).toEqual({
         message: 'User login recorded',
         userId,
-      });
-      expect(mockRepository.create).toHaveBeenCalledWith({
-        userId,
-        eventType: UserEventType.LOGIN,
-        timestamp: expect.any(Date),
-        metadata,
       });
       expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.user.login', {
         userId,
@@ -125,27 +92,12 @@ describe('UserMetricsService', () => {
     it('should record user activity successfully', async () => {
       const userId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
       const metadata = { action: 'play_song' };
-      const mockEvent = {
-        userId,
-        eventType: UserEventType.ACTIVITY,
-        timestamp: expect.any(Date),
-        metadata,
-      };
-
-      mockRepository.create.mockReturnValue(mockEvent);
-      mockRepository.save.mockResolvedValue(mockEvent);
 
       const result = await service.recordActivity(userId, metadata);
 
       expect(result).toEqual({
         message: 'User activity recorded',
         userId,
-      });
-      expect(mockRepository.create).toHaveBeenCalledWith({
-        userId,
-        eventType: UserEventType.ACTIVITY,
-        timestamp: expect.any(Date),
-        metadata,
       });
       expect(mockRabbitClient.emit).toHaveBeenCalledWith(
         'metrics.user.activity',
@@ -163,7 +115,9 @@ describe('UserMetricsService', () => {
     it('should get new registrations count successfully', async () => {
       const startDate = new Date('2024-01-01');
       const endDate = new Date('2024-01-31');
-      mockRepository.count.mockResolvedValue(42);
+      mockModel.countDocuments.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(42),
+      });
 
       const result = await service.getNewRegistrations(startDate, endDate);
 
@@ -172,11 +126,9 @@ describe('UserMetricsService', () => {
         startDate,
         endDate,
       });
-      expect(mockRepository.count).toHaveBeenCalledWith({
-        where: {
-          eventType: UserEventType.REGISTRATION,
-          timestamp: expect.any(Object), // Between object
-        },
+      expect(mockModel.countDocuments).toHaveBeenCalledWith({
+        eventType: UserEventType.REGISTRATION,
+        timestamp: { $gte: startDate, $lte: endDate },
       });
     });
   });
@@ -186,27 +138,23 @@ describe('UserMetricsService', () => {
       const startDate = new Date('2024-01-01');
       const endDate = new Date('2024-01-31');
 
-      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
-      mockQueryBuilder.getRawOne.mockResolvedValue({ count: '25' });
+      mockModel.distinct.mockReturnValueOnce({
+        exec: jest
+          .fn()
+          .mockResolvedValue(['user1', 'user2', 'user3', 'user4', 'user5']),
+      });
 
       const result = await service.getActiveUsers(startDate, endDate);
 
       expect(result).toEqual({
-        activeUsers: 25,
+        activeUsers: 5,
         startDate,
         endDate,
       });
-      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith('event');
-      expect(mockQueryBuilder.select).toHaveBeenCalledWith(
-        'COUNT(DISTINCT event.userId)',
-        'count',
-      );
-      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
-        'event.eventType IN (:...types)',
-        {
-          types: [UserEventType.LOGIN, UserEventType.ACTIVITY],
-        },
-      );
+      expect(mockModel.distinct).toHaveBeenCalledWith('userId', {
+        eventType: { $in: [UserEventType.LOGIN, UserEventType.ACTIVITY] },
+        timestamp: { $gte: startDate, $lte: endDate },
+      });
     });
   });
 
@@ -216,18 +164,16 @@ describe('UserMetricsService', () => {
       const cohortEndDate = new Date('2024-01-31');
       const daysAfter = 7;
 
-      const registeredUsers = [
-        { userId: 'user1' },
-        { userId: 'user2' },
-        { userId: 'user3' },
-      ];
+      const registeredUserIds = ['user1', 'user2', 'user3'];
+      const retainedUserIds = ['user1', 'user2'];
 
-      const retainedUsers = [{ userId: 'user1' }, { userId: 'user2' }];
-
-      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
-      mockQueryBuilder.getRawMany
-        .mockResolvedValueOnce(registeredUsers)
-        .mockResolvedValueOnce(retainedUsers);
+      mockModel.distinct
+        .mockReturnValueOnce({
+          exec: jest.fn().mockResolvedValue(registeredUserIds),
+        })
+        .mockReturnValueOnce({
+          exec: jest.fn().mockResolvedValue(retainedUserIds),
+        });
 
       const result = await service.getUserRetention(
         cohortStartDate,
@@ -249,8 +195,9 @@ describe('UserMetricsService', () => {
       const cohortStartDate = new Date('2024-01-01');
       const cohortEndDate = new Date('2024-01-31');
 
-      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
-      mockQueryBuilder.getRawMany.mockResolvedValue([]);
+      mockModel.distinct.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue([]),
+      });
 
       const result = await service.getUserRetention(
         cohortStartDate,

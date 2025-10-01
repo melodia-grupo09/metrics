@@ -4,43 +4,41 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { ClientProxy } from '@nestjs/microservices';
 import { SongMetric } from '../entities/song-metric.entity';
 
 @Injectable()
 export class SongMetricsService {
   constructor(
-    @InjectRepository(SongMetric)
-    private songMetricRepository: Repository<SongMetric>,
+    @InjectModel(SongMetric.name)
+    private songMetricModel: Model<SongMetric>,
     @Inject('METRICS_SERVICE') private readonly rabbitClient: ClientProxy,
   ) {}
 
   private async songExists(songId: string): Promise<boolean> {
-    const metric = await this.songMetricRepository.findOne({
-      where: { songId },
-    });
-
+    const metric = await this.songMetricModel.findOne({ songId }).exec();
     return metric !== null;
   }
 
   async createSong(songId: string) {
-    const existingMetric = await this.songMetricRepository.findOne({
-      where: { songId },
-    });
+    const existingMetric = await this.songMetricModel
+      .findOne({ songId })
+      .exec();
 
     if (existingMetric) {
       throw new BadRequestException('Song already exists');
     }
 
-    const songMetric = new SongMetric();
-    songMetric.songId = songId;
-    songMetric.plays = 0;
-    songMetric.likes = 0;
-    songMetric.shares = 0;
+    const songMetric = new this.songMetricModel({
+      songId,
+      plays: 0,
+      likes: 0,
+      shares: 0,
+    });
 
-    await this.songMetricRepository.save(songMetric);
+    await songMetric.save();
 
     return {
       message: 'Song created successfully',
@@ -85,9 +83,7 @@ export class SongMetricsService {
   }
 
   async getSongMetrics(songId: string) {
-    const metrics = await this.songMetricRepository.findOne({
-      where: { songId },
-    });
+    const metrics = await this.songMetricModel.findOne({ songId }).exec();
 
     if (!metrics) {
       throw new NotFoundException('Song not found');

@@ -1,27 +1,22 @@
-import {
-  Entity,
-  Column,
-  PrimaryGeneratedColumn,
-  CreateDateColumn,
-} from 'typeorm';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document } from 'mongoose';
 
-@Entity('song_metrics')
-export class SongMetric {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  @Column({ type: 'uuid' })
+@Schema({ collection: 'song_metrics', timestamps: true })
+export class SongMetric extends Document {
+  @Prop({ required: true, index: true })
   songId: string;
 
-  @Column({ default: 0 })
+  @Prop({ default: 0 })
   plays: number;
 
-  @Column({ default: 0 })
+  @Prop({ default: 0 })
   likes: number;
 
-  @Column({ default: 0 })
+  @Prop({ default: 0 })
   shares: number;
 
-  @CreateDateColumn()
+  @Prop({ default: Date.now })
   timestamp: Date;
 }
+
+export const SongMetricSchema = SchemaFactory.createForClass(SongMetric);

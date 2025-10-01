@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { getModelToken } from '@nestjs/mongoose';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { AlbumMetricsService } from './album-metrics.service';
@@ -9,17 +8,23 @@ import { SongMetric } from '../entities/song-metric.entity';
 
 describe('AlbumMetricsService', () => {
   let service: AlbumMetricsService;
-  let albumMetricRepository: Repository<AlbumMetric>;
   let rabbitClient: ClientProxy;
 
-  const mockAlbumMetricRepository = {
-    findOne: jest.fn(),
-    save: jest.fn(),
+  const mockAlbumMetricModel = function (dto: any) {
+    this.data = dto;
+    this.save = jest.fn().mockResolvedValue(this.data);
   };
 
-  const mockSongMetricRepository = {
-    findOne: jest.fn(),
-    createQueryBuilder: jest.fn(),
+  const mockAlbumModel = {
+    findOne: jest.fn().mockReturnValue({
+      exec: jest.fn(),
+    }),
+  };
+
+  const mockSongMetricModel = {
+    find: jest.fn().mockReturnValue({
+      exec: jest.fn(),
+    }),
   };
 
   const mockRabbitClient = {
@@ -31,12 +36,12 @@ describe('AlbumMetricsService', () => {
       providers: [
         AlbumMetricsService,
         {
-          provide: getRepositoryToken(AlbumMetric),
-          useValue: mockAlbumMetricRepository,
+          provide: getModelToken(AlbumMetric.name),
+          useValue: Object.assign(mockAlbumMetricModel, mockAlbumModel),
         },
         {
-          provide: getRepositoryToken(SongMetric),
-          useValue: mockSongMetricRepository,
+          provide: getModelToken(SongMetric.name),
+          useValue: mockSongMetricModel,
         },
         {
           provide: 'METRICS_SERVICE',
@@ -46,9 +51,6 @@ describe('AlbumMetricsService', () => {
     }).compile();
 
     service = module.get<AlbumMetricsService>(AlbumMetricsService);
-    albumMetricRepository = module.get<Repository<AlbumMetric>>(
-      getRepositoryToken(AlbumMetric),
-    );
     rabbitClient = module.get<ClientProxy>('METRICS_SERVICE');
   });
 
@@ -63,12 +65,8 @@ describe('AlbumMetricsService', () => {
   describe('createAlbum', () => {
     it('should create a new album successfully', async () => {
       const albumId = '123e4567-e89b-12d3-a456-426614174000';
-      mockAlbumMetricRepository.findOne.mockResolvedValue(null);
-      mockAlbumMetricRepository.save.mockResolvedValue({
-        id: 'some-id',
-        albumId,
-        likes: 0,
-        shares: 0,
+      mockAlbumModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(null),
       });
 
       const result = await service.createAlbum(albumId);
@@ -77,39 +75,37 @@ describe('AlbumMetricsService', () => {
         message: 'Album created successfully',
         albumId,
       });
-      expect(albumMetricRepository.findOne).toHaveBeenCalledWith({
-        where: { albumId },
-      });
-      expect(albumMetricRepository.save).toHaveBeenCalled();
+      expect(mockAlbumModel.findOne).toHaveBeenCalledWith({ albumId });
     });
 
     it('should throw BadRequestException if album already exists', async () => {
       const albumId = '123e4567-e89b-12d3-a456-426614174000';
-      mockAlbumMetricRepository.findOne.mockResolvedValue({
-        id: 'some-id',
-        albumId,
-        likes: 0,
-        shares: 0,
+      mockAlbumModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue({
+          id: 'some-id',
+          albumId,
+          likes: 0,
+          shares: 0,
+        }),
       });
 
       await expect(service.createAlbum(albumId)).rejects.toThrow(
         BadRequestException,
       );
-      expect(albumMetricRepository.findOne).toHaveBeenCalledWith({
-        where: { albumId },
-      });
-      expect(albumMetricRepository.save).not.toHaveBeenCalled();
+      expect(mockAlbumModel.findOne).toHaveBeenCalledWith({ albumId });
     });
   });
 
   describe('incrementAlbumLikes', () => {
     it('should increment album likes successfully', async () => {
       const albumId = '123e4567-e89b-12d3-a456-426614174000';
-      mockAlbumMetricRepository.findOne.mockResolvedValue({
-        id: 'some-id',
-        albumId,
-        likes: 5,
-        shares: 2,
+      mockAlbumModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue({
+          id: 'some-id',
+          albumId,
+          likes: 5,
+          shares: 2,
+        }),
       });
 
       const result = await service.incrementAlbumLikes(albumId);
@@ -126,7 +122,9 @@ describe('AlbumMetricsService', () => {
 
     it('should throw NotFoundException if album does not exist', async () => {
       const albumId = '123e4567-e89b-12d3-a456-426614174000';
-      mockAlbumMetricRepository.findOne.mockResolvedValue(null);
+      mockAlbumModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(null),
+      });
 
       await expect(service.incrementAlbumLikes(albumId)).rejects.toThrow(
         NotFoundException,
@@ -138,11 +136,13 @@ describe('AlbumMetricsService', () => {
   describe('incrementAlbumShares', () => {
     it('should increment album shares successfully', async () => {
       const albumId = '123e4567-e89b-12d3-a456-426614174000';
-      mockAlbumMetricRepository.findOne.mockResolvedValue({
-        id: 'some-id',
-        albumId,
-        likes: 5,
-        shares: 2,
+      mockAlbumModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue({
+          id: 'some-id',
+          albumId,
+          likes: 5,
+          shares: 2,
+        }),
       });
 
       const result = await service.incrementAlbumShares(albumId);
@@ -159,7 +159,9 @@ describe('AlbumMetricsService', () => {
 
     it('should throw NotFoundException if album does not exist', async () => {
       const albumId = '123e4567-e89b-12d3-a456-426614174000';
-      mockAlbumMetricRepository.findOne.mockResolvedValue(null);
+      mockAlbumModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(null),
+      });
 
       await expect(service.incrementAlbumShares(albumId)).rejects.toThrow(
         NotFoundException,
@@ -179,16 +181,18 @@ describe('AlbumMetricsService', () => {
         shares: 5,
       };
 
-      mockAlbumMetricRepository.findOne.mockResolvedValue(mockMetrics);
+      mockAlbumModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(mockMetrics),
+      });
 
-      const mockQueryBuilder = {
-        select: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        getRawOne: jest.fn().mockResolvedValue({ total: '150' }),
-      };
-      mockSongMetricRepository.createQueryBuilder.mockReturnValue(
-        mockQueryBuilder,
-      );
+      const mockSongs = [
+        { songId: 'song1-uuid', plays: 100 },
+        { songId: 'song2-uuid', plays: 50 },
+      ];
+
+      mockSongMetricModel.find.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(mockSongs),
+      });
 
       const result = await service.getAlbumMetrics(albumId, songIds);
 
@@ -198,12 +202,10 @@ describe('AlbumMetricsService', () => {
         likes: 10,
         shares: 5,
       });
-      expect(albumMetricRepository.findOne).toHaveBeenCalledWith({
-        where: { albumId },
+      expect(mockAlbumModel.findOne).toHaveBeenCalledWith({ albumId });
+      expect(mockSongMetricModel.find).toHaveBeenCalledWith({
+        songId: { $in: songIds },
       });
-      expect(mockSongMetricRepository.createQueryBuilder).toHaveBeenCalledWith(
-        'song',
-      );
     });
 
     it('should return album metrics with 0 plays when no songIds provided', async () => {
@@ -214,7 +216,9 @@ describe('AlbumMetricsService', () => {
         likes: 10,
         shares: 5,
       };
-      mockAlbumMetricRepository.findOne.mockResolvedValue(mockMetrics);
+      mockAlbumModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(mockMetrics),
+      });
 
       const result = await service.getAlbumMetrics(albumId);
 
@@ -228,7 +232,9 @@ describe('AlbumMetricsService', () => {
 
     it('should throw NotFoundException if album does not exist', async () => {
       const albumId = '123e4567-e89b-12d3-a456-426614174000';
-      mockAlbumMetricRepository.findOne.mockResolvedValue(null);
+      mockAlbumModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(null),
+      });
 
       await expect(service.getAlbumMetrics(albumId)).rejects.toThrow(
         NotFoundException,

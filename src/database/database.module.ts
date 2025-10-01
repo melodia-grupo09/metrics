@@ -1,24 +1,19 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
-    TypeOrmModule.forRootAsync({
+    MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const dbUrl = configService.get<string>('DATABASE_URL');
+        const mongoUri =
+          configService.get<string>('MONGODB_URI') ||
+          'mongodb://admin:admin@localhost:27017/metrics?authSource=admin';
 
         return {
-          type: 'postgres',
-          url: dbUrl,
-          entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-          synchronize: configService.get('NODE_ENV') !== 'production',
-          ssl:
-            configService.get('NODE_ENV') === 'production'
-              ? { rejectUnauthorized: false }
-              : false,
+          uri: mongoUri,
         };
       },
     }),

@@ -1,27 +1,27 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { ClientProxy } from '@nestjs/microservices';
 import { UserMetric, UserEventType } from '../entities/user-metric.entity';
 
 @Injectable()
 export class UserMetricsService {
   constructor(
-    @InjectRepository(UserMetric)
-    private userEventRepository: Repository<UserMetric>,
+    @InjectModel(UserMetric.name)
+    private userEventModel: Model<UserMetric>,
     @Inject('METRICS_SERVICE') private readonly rabbitClient: ClientProxy,
   ) {}
 
   // Simple endpoints for recording events
   async recordRegistration(userId: string, metadata?: Record<string, any>) {
-    const event = this.userEventRepository.create({
+    const event = new this.userEventModel({
       userId,
       eventType: UserEventType.REGISTRATION,
       timestamp: new Date(),
       metadata,
     });
 
-    await this.userEventRepository.save(event);
+    await event.save();
 
     this.rabbitClient.emit('metrics.user.registration', {
       userId,
@@ -37,14 +37,14 @@ export class UserMetricsService {
   }
 
   async recordLogin(userId: string, metadata?: Record<string, any>) {
-    const event = this.userEventRepository.create({
+    const event = new this.userEventModel({
       userId,
       eventType: UserEventType.LOGIN,
       timestamp: new Date(),
       metadata,
     });
 
-    await this.userEventRepository.save(event);
+    await event.save();
 
     this.rabbitClient.emit('metrics.user.login', {
       userId,
@@ -60,14 +60,14 @@ export class UserMetricsService {
   }
 
   async recordActivity(userId: string, metadata?: Record<string, any>) {
-    const event = this.userEventRepository.create({
+    const event = new this.userEventModel({
       userId,
       eventType: UserEventType.ACTIVITY,
       timestamp: new Date(),
       metadata,
     });
 
-    await this.userEventRepository.save(event);
+    await event.save();
 
     this.rabbitClient.emit('metrics.user.activity', {
       userId,
@@ -84,12 +84,12 @@ export class UserMetricsService {
 
   // Analytics endpoints - The 3 key metrics
   async getNewRegistrations(startDate: Date, endDate: Date) {
-    const count = await this.userEventRepository.count({
-      where: {
+    const count = await this.userEventModel
+      .countDocuments({
         eventType: UserEventType.REGISTRATION,
-        timestamp: Between(startDate, endDate),
-      },
-    });
+        timestamp: { $gte: startDate, $lte: endDate },
+      })
+      .exec();
 
     return {
       totalRegistrations: count,
@@ -99,20 +99,15 @@ export class UserMetricsService {
   }
 
   async getActiveUsers(startDate: Date, endDate: Date) {
-    const result = await this.userEventRepository
-      .createQueryBuilder('event')
-      .select('COUNT(DISTINCT event.userId)', 'count')
-      .where('event.eventType IN (:...types)', {
-        types: [UserEventType.LOGIN, UserEventType.ACTIVITY],
+    const result = await this.userEventModel
+      .distinct('userId', {
+        eventType: { $in: [UserEventType.LOGIN, UserEventType.ACTIVITY] },
+        timestamp: { $gte: startDate, $lte: endDate },
       })
-      .andWhere('event.timestamp BETWEEN :startDate AND :endDate', {
-        startDate,
-        endDate,
-      })
-      .getRawOne<{ count: string }>();
+      .exec();
 
     return {
-      activeUsers: parseInt(result?.count || '0', 10),
+      activeUsers: result.length,
       startDate,
       endDate,
     };
@@ -124,17 +119,12 @@ export class UserMetricsService {
     daysAfter: number = 7,
   ) {
     // Get users who registered in the cohort period
-    const registeredUsers = await this.userEventRepository
-      .createQueryBuilder('event')
-      .select('DISTINCT event.userId', 'userId')
-      .where('event.eventType = :type', { type: UserEventType.REGISTRATION })
-      .andWhere('event.timestamp BETWEEN :startDate AND :endDate', {
-        startDate: cohortStartDate,
-        endDate: cohortEndDate,
+    const registeredUserIds = await this.userEventModel
+      .distinct('userId', {
+        eventType: UserEventType.REGISTRATION,
+        timestamp: { $gte: cohortStartDate, $lte: cohortEndDate },
       })
-      .getRawMany<{ userId: string }>();
-
-    const registeredUserIds = registeredUsers.map((u) => u.userId);
+      .exec();
 
     if (registeredUserIds.length === 0) {
       return {
@@ -154,21 +144,16 @@ export class UserMetricsService {
     retentionEndDate.setDate(retentionEndDate.getDate() + 1);
 
     // Get users who were active after N days
-    const retainedUsers = await this.userEventRepository
-      .createQueryBuilder('event')
-      .select('DISTINCT event.userId', 'userId')
-      .where('event.userId IN (:...userIds)', { userIds: registeredUserIds })
-      .andWhere('event.eventType IN (:...types)', {
-        types: [UserEventType.LOGIN, UserEventType.ACTIVITY],
+    const retainedUserIds = await this.userEventModel
+      .distinct('userId', {
+        userId: { $in: registeredUserIds },
+        eventType: { $in: [UserEventType.LOGIN, UserEventType.ACTIVITY] },
+        timestamp: { $gte: retentionStartDate, $lte: retentionEndDate },
       })
-      .andWhere('event.timestamp BETWEEN :startDate AND :endDate', {
-        startDate: retentionStartDate,
-        endDate: retentionEndDate,
-      })
-      .getRawMany<{ userId: string }>();
+      .exec();
 
     const totalRegistered = registeredUserIds.length;
-    const totalRetained = retainedUsers.length;
+    const totalRetained = retainedUserIds.length;
     const retentionRate = (totalRetained / totalRegistered) * 100;
 
     return {

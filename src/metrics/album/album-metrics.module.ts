@@ -1,15 +1,24 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 import { AlbumMetricsController } from './album-metrics.controller';
 import { AlbumMetricsService } from './album-metrics.service';
-import { AlbumMetric } from '../entities/album-metric.entity';
-import { SongMetric } from '../entities/song-metric.entity';
+import {
+  AlbumMetric,
+  AlbumMetricSchema,
+} from '../entities/album-metric.entity';
+import { SongMetric, SongMetricSchema } from '../entities/song-metric.entity';
 import { RabbitModule } from '../../rabbit/rabbit.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AlbumMetric, SongMetric]), RabbitModule],
+  imports: [
+    MongooseModule.forFeature([
+      { name: AlbumMetric.name, schema: AlbumMetricSchema },
+      { name: SongMetric.name, schema: SongMetricSchema },
+    ]),
+    RabbitModule,
+  ],
   controllers: [AlbumMetricsController],
   providers: [AlbumMetricsService],
-  exports: [AlbumMetricsService, TypeOrmModule],
+  exports: [AlbumMetricsService],
 })
 export class AlbumMetricsModule {}

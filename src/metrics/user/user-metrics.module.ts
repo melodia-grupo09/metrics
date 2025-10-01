@@ -1,14 +1,19 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 import { UserMetricsController } from './user-metrics.controller';
 import { UserMetricsService } from './user-metrics.service';
-import { UserMetric } from '../entities/user-metric.entity';
+import { UserMetric, UserMetricSchema } from '../entities/user-metric.entity';
 import { RabbitModule } from '../../rabbit/rabbit.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([UserMetric]), RabbitModule],
+  imports: [
+    MongooseModule.forFeature([
+      { name: UserMetric.name, schema: UserMetricSchema },
+    ]),
+    RabbitModule,
+  ],
   controllers: [UserMetricsController],
   providers: [UserMetricsService],
-  exports: [UserMetricsService, TypeOrmModule],
+  exports: [UserMetricsService],
 })
 export class UserMetricsModule {}

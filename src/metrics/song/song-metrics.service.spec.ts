@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { getModelToken } from '@nestjs/mongoose';
 import { SongMetricsService } from './song-metrics.service';
 import { SongMetric } from '../entities/song-metric.entity';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
@@ -7,9 +7,15 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 describe('SongMetricsService', () => {
   let service: SongMetricsService;
 
-  const mockRepository = {
-    findOne: jest.fn(),
-    save: jest.fn(),
+  const mockSongMetricModel = function (dto: any) {
+    this.data = dto;
+    this.save = jest.fn().mockResolvedValue(this.data);
+  };
+
+  const mockModel = {
+    findOne: jest.fn().mockReturnValue({
+      exec: jest.fn(),
+    }),
     create: jest.fn(),
   };
 
@@ -22,8 +28,8 @@ describe('SongMetricsService', () => {
       providers: [
         SongMetricsService,
         {
-          provide: getRepositoryToken(SongMetric),
-          useValue: mockRepository,
+          provide: getModelToken(SongMetric.name),
+          useValue: Object.assign(mockSongMetricModel, mockModel),
         },
         {
           provide: 'METRICS_SERVICE',
@@ -42,12 +48,8 @@ describe('SongMetricsService', () => {
   describe('createSong', () => {
     it('should create a song successfully', async () => {
       const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
-      mockRepository.findOne.mockResolvedValue(null);
-      mockRepository.save.mockResolvedValue({
-        songId,
-        plays: 0,
-        likes: 0,
-        shares: 0,
+      mockModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(null),
       });
 
       const result = await service.createSong(songId);
@@ -56,36 +58,33 @@ describe('SongMetricsService', () => {
         message: 'Song created successfully',
         songId,
       });
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { songId },
-      });
-      expect(mockRepository.save).toHaveBeenCalled();
+      expect(mockModel.findOne).toHaveBeenCalledWith({ songId });
     });
 
     it('should throw BadRequestException if song already exists', async () => {
       const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
-      mockRepository.findOne.mockResolvedValue({ songId });
+      mockModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue({ songId }),
+      });
 
       await expect(service.createSong(songId)).rejects.toThrow(
         BadRequestException,
       );
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { songId },
-      });
+      expect(mockModel.findOne).toHaveBeenCalledWith({ songId });
     });
   });
 
   describe('incrementSongPlays', () => {
     it('should increment song plays successfully', async () => {
       const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
-      mockRepository.findOne.mockResolvedValue({ songId });
+      mockModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue({ songId }),
+      });
 
       const result = await service.incrementSongPlays(songId);
 
       expect(result).toEqual({ message: 'Song play recorded' });
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { songId },
-      });
+      expect(mockModel.findOne).toHaveBeenCalledWith({ songId });
       expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.song.play', {
         songId,
         metricType: 'play',
@@ -95,7 +94,9 @@ describe('SongMetricsService', () => {
 
     it('should throw NotFoundException if song does not exist', async () => {
       const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
-      mockRepository.findOne.mockResolvedValue(null);
+      mockModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(null),
+      });
 
       await expect(service.incrementSongPlays(songId)).rejects.toThrow(
         NotFoundException,
@@ -106,14 +107,14 @@ describe('SongMetricsService', () => {
   describe('incrementSongLikes', () => {
     it('should increment song likes successfully', async () => {
       const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
-      mockRepository.findOne.mockResolvedValue({ songId });
+      mockModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue({ songId }),
+      });
 
       const result = await service.incrementSongLikes(songId);
 
       expect(result).toEqual({ message: 'Song like recorded' });
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { songId },
-      });
+      expect(mockModel.findOne).toHaveBeenCalledWith({ songId });
       expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.song.like', {
         songId,
         metricType: 'like',
@@ -123,7 +124,9 @@ describe('SongMetricsService', () => {
 
     it('should throw NotFoundException if song does not exist', async () => {
       const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
-      mockRepository.findOne.mockResolvedValue(null);
+      mockModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(null),
+      });
 
       await expect(service.incrementSongLikes(songId)).rejects.toThrow(
         NotFoundException,
@@ -134,14 +137,14 @@ describe('SongMetricsService', () => {
   describe('incrementSongShares', () => {
     it('should increment song shares successfully', async () => {
       const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
-      mockRepository.findOne.mockResolvedValue({ songId });
+      mockModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue({ songId }),
+      });
 
       const result = await service.incrementSongShares(songId);
 
       expect(result).toEqual({ message: 'Song share recorded' });
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { songId },
-      });
+      expect(mockModel.findOne).toHaveBeenCalledWith({ songId });
       expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.song.share', {
         songId,
         metricType: 'share',
@@ -151,7 +154,9 @@ describe('SongMetricsService', () => {
 
     it('should throw NotFoundException if song does not exist', async () => {
       const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
-      mockRepository.findOne.mockResolvedValue(null);
+      mockModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(null),
+      });
 
       await expect(service.incrementSongShares(songId)).rejects.toThrow(
         NotFoundException,
@@ -168,7 +173,9 @@ describe('SongMetricsService', () => {
         likes: 50,
         shares: 25,
       };
-      mockRepository.findOne.mockResolvedValue(songMetric);
+      mockModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(songMetric),
+      });
 
       const result = await service.getSongMetrics(songId);
 
@@ -178,14 +185,14 @@ describe('SongMetricsService', () => {
         likes: 50,
         shares: 25,
       });
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { songId },
-      });
+      expect(mockModel.findOne).toHaveBeenCalledWith({ songId });
     });
 
     it('should throw NotFoundException if song does not exist', async () => {
       const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
-      mockRepository.findOne.mockResolvedValue(null);
+      mockModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(null),
+      });
 
       await expect(service.getSongMetrics(songId)).rejects.toThrow(
         NotFoundException,

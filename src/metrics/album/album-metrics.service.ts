@@ -4,8 +4,8 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { ClientProxy } from '@nestjs/microservices';
 import { AlbumMetric } from '../entities/album-metric.entity';
 import { SongMetric } from '../entities/song-metric.entity';
@@ -14,27 +14,28 @@ import { SongMetric } from '../entities/song-metric.entity';
 export class AlbumMetricsService {
   constructor(
     @Inject('METRICS_SERVICE') private readonly rabbitClient: ClientProxy,
-    @InjectRepository(AlbumMetric)
-    private albumMetricRepository: Repository<AlbumMetric>,
-    @InjectRepository(SongMetric)
-    private songMetricRepository: Repository<SongMetric>,
+    @InjectModel(AlbumMetric.name)
+    private albumMetricModel: Model<AlbumMetric>,
+    @InjectModel(SongMetric.name)
+    private songMetricModel: Model<SongMetric>,
   ) {}
 
   async createAlbum(albumId: string) {
-    const existingMetric = await this.albumMetricRepository.findOne({
-      where: { albumId },
-    });
+    const existingMetric = await this.albumMetricModel
+      .findOne({ albumId })
+      .exec();
 
     if (existingMetric) {
       throw new BadRequestException('Album already exists');
     }
 
-    const albumMetric = new AlbumMetric();
-    albumMetric.albumId = albumId;
-    albumMetric.likes = 0;
-    albumMetric.shares = 0;
+    const albumMetric = new this.albumMetricModel({
+      albumId,
+      likes: 0,
+      shares: 0,
+    });
 
-    await this.albumMetricRepository.save(albumMetric);
+    await albumMetric.save();
 
     return {
       message: 'Album created successfully',
@@ -67,17 +68,14 @@ export class AlbumMetricsService {
   }
 
   private async albumExists(albumId: string): Promise<boolean> {
-    const metric = await this.albumMetricRepository.findOne({
-      where: { albumId },
-    });
-
+    const metric = await this.albumMetricModel.findOne({ albumId }).exec();
     return metric !== null;
   }
 
   async getAlbumMetrics(albumId: string, songIds?: string[]) {
-    const albumMetrics = await this.albumMetricRepository.findOne({
-      where: { albumId },
-    });
+    const albumMetrics = await this.albumMetricModel
+      .findOne({ albumId })
+      .exec();
 
     if (!albumMetrics) {
       throw new NotFoundException('Album not found');
@@ -85,13 +83,11 @@ export class AlbumMetricsService {
 
     let totalPlays = 0;
     if (songIds && songIds.length > 0) {
-      const result = await this.songMetricRepository
-        .createQueryBuilder('song')
-        .select('SUM(song.plays)', 'total')
-        .where('song.songId IN (:...songIds)', { songIds })
-        .getRawOne<{ total: string }>();
+      const songs = await this.songMetricModel
+        .find({ songId: { $in: songIds } })
+        .exec();
 
-      totalPlays = parseInt(result?.total || '0', 10);
+      totalPlays = songs.reduce((sum, song) => sum + song.plays, 0);
     }
 
     return {

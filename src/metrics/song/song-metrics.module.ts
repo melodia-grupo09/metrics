@@ -1,14 +1,19 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 import { SongMetricsController } from './song-metrics.controller';
 import { SongMetricsService } from './song-metrics.service';
-import { SongMetric } from '../entities/song-metric.entity';
+import { SongMetric, SongMetricSchema } from '../entities/song-metric.entity';
 import { RabbitModule } from '../../rabbit/rabbit.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([SongMetric]), RabbitModule],
+  imports: [
+    MongooseModule.forFeature([
+      { name: SongMetric.name, schema: SongMetricSchema },
+    ]),
+    RabbitModule,
+  ],
   controllers: [SongMetricsController],
   providers: [SongMetricsService],
-  exports: [SongMetricsService, TypeOrmModule], // Export TypeOrmModule so parent module can inject repositories
+  exports: [SongMetricsService],
 })
 export class SongMetricsModule {}

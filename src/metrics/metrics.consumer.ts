@@ -1,8 +1,8 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import amqp, { ChannelWrapper } from 'amqp-connection-manager';
 import { ConfirmChannel, ConsumeMessage } from 'amqplib';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { AlbumMetric } from './entities/album-metric.entity';
 import { SongMetric } from './entities/song-metric.entity';
 import { UserMetric, UserEventType } from './entities/user-metric.entity';
@@ -32,12 +32,12 @@ export class MetricsConsumer implements OnModuleInit {
   private readonly logger = new Logger(MetricsConsumer.name);
 
   constructor(
-    @InjectRepository(AlbumMetric)
-    private albumMetricRepository: Repository<AlbumMetric>,
-    @InjectRepository(SongMetric)
-    private songMetricRepository: Repository<SongMetric>,
-    @InjectRepository(UserMetric)
-    private userEventRepository: Repository<UserMetric>,
+    @InjectModel(AlbumMetric.name)
+    private albumMetricModel: Model<AlbumMetric>,
+    @InjectModel(SongMetric.name)
+    private songMetricModel: Model<SongMetric>,
+    @InjectModel(UserMetric.name)
+    private userEventModel: Model<UserMetric>,
   ) {
     const connection = amqp.connect(['amqp://localhost:5672']);
     this.channelWrapper = connection.createChannel();
@@ -108,9 +108,9 @@ export class MetricsConsumer implements OnModuleInit {
         return;
       }
 
-      const songMetric = await this.songMetricRepository.findOne({
-        where: { songId: eventData.songId },
-      });
+      const songMetric = await this.songMetricModel
+        .findOne({ songId: eventData.songId })
+        .exec();
 
       if (!songMetric) {
         this.logger.warn(
@@ -136,7 +136,7 @@ export class MetricsConsumer implements OnModuleInit {
           return;
       }
 
-      await this.songMetricRepository.save(songMetric);
+      await songMetric.save();
       this.logger.log(
         `Updated ${eventData.metricType} for song ${eventData.songId}`,
       );
@@ -156,14 +156,14 @@ export class MetricsConsumer implements OnModuleInit {
         return;
       }
 
-      const userEvent = this.userEventRepository.create({
+      const userEvent = new this.userEventModel({
         userId: eventData.userId,
         eventType: eventData.eventType,
         timestamp: new Date(eventData.timestamp),
         metadata: eventData.metadata,
       });
 
-      await this.userEventRepository.save(userEvent);
+      await userEvent.save();
       this.logger.log(
         `Recorded ${eventData.eventType} event for user ${eventData.userId}`,
       );
@@ -181,15 +181,16 @@ export class MetricsConsumer implements OnModuleInit {
         return;
       }
 
-      let albumMetric = await this.albumMetricRepository.findOne({
-        where: { albumId: eventData.albumId },
-      });
+      let albumMetric = await this.albumMetricModel
+        .findOne({ albumId: eventData.albumId })
+        .exec();
 
       if (!albumMetric) {
-        albumMetric = new AlbumMetric();
-        albumMetric.albumId = eventData.albumId;
-        albumMetric.likes = 0;
-        albumMetric.shares = 0;
+        albumMetric = new this.albumMetricModel({
+          albumId: eventData.albumId,
+          likes: 0,
+          shares: 0,
+        });
       }
 
       switch (eventData.metricType) {
@@ -206,7 +207,7 @@ export class MetricsConsumer implements OnModuleInit {
           return;
       }
 
-      await this.albumMetricRepository.save(albumMetric);
+      await albumMetric.save();
       this.logger.log(
         `Updated ${eventData.metricType} for album ${eventData.albumId}`,
       );
