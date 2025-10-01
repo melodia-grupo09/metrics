@@ -89,7 +89,7 @@ describe('MetricsService', () => {
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { albumId },
       });
-      expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.album', {
+      expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.album.like', {
         albumId,
         metricType: 'like',
         timestamp: expect.any(Date) as Date,
@@ -117,11 +117,14 @@ describe('MetricsService', () => {
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { albumId },
       });
-      expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.album', {
-        albumId,
-        metricType: 'share',
-        timestamp: expect.any(Date) as Date,
-      });
+      expect(mockRabbitClient.emit).toHaveBeenCalledWith(
+        'metrics.album.share',
+        {
+          albumId,
+          metricType: 'share',
+          timestamp: expect.any(Date) as Date,
+        },
+      );
     });
 
     it('should throw NotFoundException if album does not exist', async () => {

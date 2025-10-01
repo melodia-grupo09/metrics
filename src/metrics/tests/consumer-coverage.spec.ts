@@ -94,9 +94,9 @@ describe('RabbitMQ Consumer Coverage Tests', () => {
       }
 
       // This test will fail if handlers are missing
-      console.log('✅ All required consumer handlers are present');
-      console.log('📋 Known patterns:', knownPatterns);
-      console.log('🔧 Handler methods:', handlerMethods);
+      console.log('All required consumer handlers are present');
+      console.log('Known patterns:', knownPatterns);
+      console.log('Handler methods:', handlerMethods);
     });
 
     it('should process song metrics without throwing errors', async () => {
@@ -108,12 +108,9 @@ describe('RabbitMQ Consumer Coverage Tests', () => {
       });
 
       const event = {
-        pattern: 'metrics.song',
-        data: {
-          songId: 'test',
-          metricType: 'play' as const,
-          timestamp: new Date(),
-        },
+        songId: 'test',
+        metricType: 'play' as const,
+        timestamp: new Date(),
       };
 
       await expect(consumer.handleSongMetric(event)).resolves.not.toThrow();
@@ -128,12 +125,9 @@ describe('RabbitMQ Consumer Coverage Tests', () => {
       });
 
       const event = {
-        pattern: 'metrics.album',
-        data: {
-          albumId: 'test',
-          metricType: 'like' as const,
-          timestamp: new Date(),
-        },
+        albumId: 'test',
+        metricType: 'like' as const,
+        timestamp: new Date(),
       };
 
       await expect(consumer.handleAlbumMetric(event)).resolves.not.toThrow();
@@ -142,23 +136,19 @@ describe('RabbitMQ Consumer Coverage Tests', () => {
 
     it('should process user metrics without throwing errors', async () => {
       const event = {
-        pattern: 'metrics.user',
-        data: {
-          userId: 'test',
-          metricType: 'registration' as const,
-          timestamp: new Date(),
-        },
+        userId: 'test',
+        metricType: 'registration' as const,
+        timestamp: new Date(),
       };
 
       await expect(consumer.handleUserMetric(event)).resolves.not.toThrow();
     });
 
     it('should validate that ALL service emission patterns have consumer handlers', () => {
-      // Known emission patterns from services (update when adding new services)
       const serviceEmissionPatterns = [
-        'metrics.song', // SongMetricsService
-        'metrics.album', // MetricsService
-        'metrics.user', // UserMetricsService
+        'metrics.song',
+        'metrics.album',
+        'metrics.user',
       ];
 
       // Consumer should handle all of these patterns
@@ -178,7 +168,7 @@ describe('RabbitMQ Consumer Coverage Tests', () => {
           'function',
         );
 
-        console.log(`✅ Pattern '${pattern}' → Handler '${handlerMethod}' ✓`);
+        console.log(`Pattern '${pattern}' -> Handler '${handlerMethod}'`);
       }
 
       // If you add a new service that emits messages, add the pattern here!
@@ -187,7 +177,7 @@ describe('RabbitMQ Consumer Coverage Tests', () => {
         serviceEmissionPatterns.length,
       );
 
-      console.log('🎯 All service emission patterns have consumer handlers!');
+      console.log('All service emission patterns have consumer handlers!');
     });
 
     it('should verify that consumer handlers actually process data (not just log)', async () => {
@@ -196,12 +186,9 @@ describe('RabbitMQ Consumer Coverage Tests', () => {
       mockSongRepository.findOne.mockResolvedValue(songMetric);
 
       const songEvent = {
-        pattern: 'metrics.song',
-        data: {
-          songId: 'test',
-          metricType: 'play' as const,
-          timestamp: new Date(),
-        },
+        songId: 'test',
+        metricType: 'play' as const,
+        timestamp: new Date(),
       };
 
       await consumer.handleSongMetric(songEvent);
@@ -216,12 +203,9 @@ describe('RabbitMQ Consumer Coverage Tests', () => {
       mockAlbumRepository.findOne.mockResolvedValue(albumMetric);
 
       const albumEvent = {
-        pattern: 'metrics.album',
-        data: {
-          albumId: 'test',
-          metricType: 'like' as const,
-          timestamp: new Date(),
-        },
+        albumId: 'test',
+        metricType: 'like' as const,
+        timestamp: new Date(),
       };
 
       await consumer.handleAlbumMetric(albumEvent);
@@ -232,7 +216,7 @@ describe('RabbitMQ Consumer Coverage Tests', () => {
       });
 
       console.log(
-        '✅ Consumer handlers are actually processing, not just logging!',
+        'Consumer handlers are actually processing, not just logging!',
       );
     });
   });
@@ -248,12 +232,12 @@ describe('RabbitMQ Consumer Coverage Tests', () => {
       // This would fail if you added a new service that emits messages
       // but forgot to add the routing logic in the consumer
       for (const pattern of expectedPatterns) {
-        console.log(`🔍 Checking pattern routing for: ${pattern}`);
+        console.log(`Checking pattern routing for: ${pattern}`);
 
         expect(pattern).toMatch(/^metrics\.(song|album|user)$/);
       }
 
-      console.log('✅ All patterns have expected routing logic patterns');
+      console.log('All patterns have expected routing logic patterns');
     });
   });
 });

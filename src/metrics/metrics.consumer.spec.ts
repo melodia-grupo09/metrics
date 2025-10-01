@@ -99,12 +99,9 @@ describe('MetricsConsumer', () => {
       });
 
       const eventData = {
-        pattern: 'metrics.song',
-        data: {
-          songId,
-          metricType: 'play' as const,
-          timestamp: new Date(),
-        },
+        songId,
+        metricType: 'play' as const,
+        timestamp: new Date(),
       };
 
       await consumer.handleSongMetric(eventData);
@@ -134,12 +131,9 @@ describe('MetricsConsumer', () => {
       });
 
       const eventData = {
-        pattern: 'metrics.song',
-        data: {
-          songId,
-          metricType: 'like' as const,
-          timestamp: new Date(),
-        },
+        songId,
+        metricType: 'like' as const,
+        timestamp: new Date(),
       };
 
       await consumer.handleSongMetric(eventData);
@@ -166,12 +160,9 @@ describe('MetricsConsumer', () => {
       });
 
       const eventData = {
-        pattern: 'metrics.song',
-        data: {
-          songId,
-          metricType: 'share' as const,
-          timestamp: new Date(),
-        },
+        songId,
+        metricType: 'share' as const,
+        timestamp: new Date(),
       };
 
       await consumer.handleSongMetric(eventData);
@@ -187,12 +178,9 @@ describe('MetricsConsumer', () => {
       mockSongRepository.findOne.mockResolvedValue(null);
 
       const eventData = {
-        pattern: 'metrics.song',
-        data: {
-          songId,
-          metricType: 'play' as const,
-          timestamp: new Date(),
-        },
+        songId,
+        metricType: 'play' as const,
+        timestamp: new Date(),
       };
 
       await consumer.handleSongMetric(eventData);
@@ -215,12 +203,9 @@ describe('MetricsConsumer', () => {
       mockSongRepository.findOne.mockResolvedValue(existingSong);
 
       const eventData = {
-        pattern: 'metrics.song',
-        data: {
-          songId,
-          metricType: 'invalid' as 'play',
-          timestamp: new Date(),
-        },
+        songId,
+        metricType: 'invalid' as 'play',
+        timestamp: new Date(),
       };
 
       await consumer.handleSongMetric(eventData);
@@ -247,12 +232,9 @@ describe('MetricsConsumer', () => {
       });
 
       const eventData = {
-        pattern: 'metrics.album',
-        data: {
-          albumId,
-          metricType: 'like' as const,
-          timestamp: new Date(),
-        },
+        albumId,
+        metricType: 'like' as const,
+        timestamp: new Date(),
       };
 
       await consumer.handleAlbumMetric(eventData);
@@ -268,12 +250,9 @@ describe('MetricsConsumer', () => {
       mockAlbumRepository.findOne.mockResolvedValue(null);
 
       const eventData = {
-        pattern: 'metrics.album',
-        data: {
-          albumId,
-          metricType: 'like' as const,
-          timestamp: new Date(),
-        },
+        albumId,
+        metricType: 'like' as const,
+        timestamp: new Date(),
       };
 
       await consumer.handleAlbumMetric(eventData);
@@ -289,13 +268,10 @@ describe('MetricsConsumer', () => {
   describe('handleUserMetric', () => {
     it('should process user registration event', async () => {
       const eventData = {
-        pattern: 'metrics.user',
-        data: {
-          userId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-          email: 'test@example.com',
-          metricType: 'registration' as const,
-          timestamp: new Date(),
-        },
+        userId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        email: 'test@example.com',
+        metricType: 'registration' as const,
+        timestamp: new Date(),
       };
 
       await consumer.handleUserMetric(eventData);
@@ -306,12 +282,9 @@ describe('MetricsConsumer', () => {
 
     it('should process user activity event', async () => {
       const eventData = {
-        pattern: 'metrics.user',
-        data: {
-          userId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-          metricType: 'activity' as const,
-          timestamp: new Date(),
-        },
+        userId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        metricType: 'activity' as const,
+        timestamp: new Date(),
       };
 
       await consumer.handleUserMetric(eventData);
@@ -327,12 +300,9 @@ describe('MetricsConsumer', () => {
       mockSongRepository.findOne.mockRejectedValue(new Error('Database error'));
 
       const eventData = {
-        pattern: 'metrics.song',
-        data: {
-          songId,
-          metricType: 'play' as const,
-          timestamp: new Date(),
-        },
+        songId,
+        metricType: 'play' as const,
+        timestamp: new Date(),
       };
 
       await expect(consumer.handleSongMetric(eventData)).rejects.toThrow(
@@ -347,12 +317,9 @@ describe('MetricsConsumer', () => {
       );
 
       const eventData = {
-        pattern: 'metrics.album',
-        data: {
-          albumId,
-          metricType: 'like' as const,
-          timestamp: new Date(),
-        },
+        albumId,
+        metricType: 'like' as const,
+        timestamp: new Date(),
       };
 
       await expect(consumer.handleAlbumMetric(eventData)).rejects.toThrow(

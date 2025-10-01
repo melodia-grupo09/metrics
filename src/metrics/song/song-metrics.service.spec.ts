@@ -86,7 +86,7 @@ describe('SongMetricsService', () => {
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { songId },
       });
-      expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.song', {
+      expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.song.play', {
         songId,
         metricType: 'play',
         timestamp: expect.any(Date) as Date,
@@ -114,7 +114,7 @@ describe('SongMetricsService', () => {
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { songId },
       });
-      expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.song', {
+      expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.song.like', {
         songId,
         metricType: 'like',
         timestamp: expect.any(Date) as Date,
@@ -142,7 +142,7 @@ describe('SongMetricsService', () => {
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { songId },
       });
-      expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.song', {
+      expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.song.share', {
         songId,
         metricType: 'share',
         timestamp: expect.any(Date) as Date,

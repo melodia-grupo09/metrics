@@ -67,12 +67,15 @@ describe('UserMetricsService', () => {
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { userId },
       });
-      expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.user', {
-        userId,
-        email,
-        metricType: 'registration',
-        timestamp: expect.any(Date) as unknown as Date,
-      });
+      expect(mockRabbitClient.emit).toHaveBeenCalledWith(
+        'metrics.user.registration',
+        {
+          userId,
+          email,
+          metricType: 'registration',
+          timestamp: expect.any(Date) as unknown as Date,
+        },
+      );
     });
 
     it('should throw BadRequestException if user already exists', async () => {
@@ -107,11 +110,14 @@ describe('UserMetricsService', () => {
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { userId },
       });
-      expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.user', {
-        userId,
-        metricType: 'activity',
-        timestamp: expect.any(Date) as unknown as Date,
-      });
+      expect(mockRabbitClient.emit).toHaveBeenCalledWith(
+        'metrics.user.activity',
+        {
+          userId,
+          metricType: 'activity',
+          timestamp: expect.any(Date) as unknown as Date,
+        },
+      );
     });
 
     it('should throw NotFoundException if user does not exist', async () => {
