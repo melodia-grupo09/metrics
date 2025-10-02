@@ -101,7 +101,7 @@ This hierarchical structure allows for:
 - [x] **CA2**: Basic album metrics (likes, shares)
   - Endpoints: `POST /metrics/:albumId/like`, `/share`
   - Endpoint: `GET /metrics/:albumId` to retrieve metrics
-- [ ] **CA2**: Total album plays (sum of all songs in the album)
+- [x] **CA2**: Total album plays (sum of all songs in the album)
 
 ### User Metrics
 
