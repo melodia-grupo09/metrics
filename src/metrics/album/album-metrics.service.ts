@@ -23,7 +23,11 @@ export class AlbumMetricsService implements OnModuleInit {
     @InjectModel(SongMetric.name)
     private songMetricModel: Model<SongMetric>,
   ) {
-    const connection = amqp.connect(['amqp://localhost:5672']);
+    const rabbitUrl =
+      process.env.CLOUDAMQP_URL ||
+      process.env.RABBITMQ_URL ||
+      'amqp://localhost:5672';
+    const connection = amqp.connect([rabbitUrl]);
     this.channelWrapper = connection.createChannel();
   }
 
