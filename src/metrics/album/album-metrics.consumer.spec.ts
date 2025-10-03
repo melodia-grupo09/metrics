@@ -185,4 +185,43 @@ describe('AlbumMetricsConsumer', () => {
       await expect(consumer.handleAlbumMetric(message)).resolves.not.toThrow();
     });
   });
+
+  describe('onModuleInit', () => {
+    it('should initialize RabbitMQ setup correctly', async () => {
+      const mockChannel = {
+        assertExchange: jest.fn().mockResolvedValue(undefined),
+        assertQueue: jest
+          .fn()
+          .mockResolvedValue({ queue: 'album_metrics_queue' }),
+        bindQueue: jest.fn().mockResolvedValue(undefined),
+        consume: jest.fn().mockResolvedValue(undefined),
+      };
+
+      const amqpMock = jest.requireMock('amqp-connection-manager');
+      const mockChannelWrapper = amqpMock.connect().createChannel();
+
+      mockChannelWrapper.addSetup.mockImplementation(async (setupFn: any) => {
+        await setupFn(mockChannel);
+      });
+
+      await consumer.onModuleInit();
+
+      expect(mockChannelWrapper.addSetup).toHaveBeenCalledTimes(1);
+      expect(mockChannel.assertExchange).toHaveBeenCalledWith(
+        'metrics_exchange',
+        'topic',
+        { durable: true },
+      );
+      expect(mockChannel.assertQueue).toHaveBeenCalledWith(
+        'album_metrics_queue',
+        { durable: true },
+      );
+      expect(mockChannel.bindQueue).toHaveBeenCalledWith(
+        'album_metrics_queue',
+        'metrics_exchange',
+        'metrics.album.*',
+      );
+      expect(mockChannel.consume).toHaveBeenCalledTimes(1);
+    });
+  });
 });
