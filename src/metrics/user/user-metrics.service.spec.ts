@@ -3,7 +3,7 @@ import { getModelToken } from '@nestjs/mongoose';
 import { UserMetricsService } from './user-metrics.service';
 import { UserMetric, UserEventType } from '../entities/user-metric.entity';
 
-// Mock amqp-connection-manager to prevent actual RabbitMQ connections
+// Mock amqp-connection-manager
 const mockRabbitMQ = jest.fn();
 const mockAddSetup = jest.fn(() => Promise.resolve());
 

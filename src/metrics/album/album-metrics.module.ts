@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AlbumMetricsController } from './album-metrics.controller';
 import { AlbumMetricsService } from './album-metrics.service';
+import { AlbumMetricsConsumer } from './album-metrics.consumer';
 import {
   AlbumMetric,
   AlbumMetricSchema,
@@ -18,7 +19,7 @@ import { RabbitModule } from '../../rabbit/rabbit.module';
     RabbitModule,
   ],
   controllers: [AlbumMetricsController],
-  providers: [AlbumMetricsService],
+  providers: [AlbumMetricsService, AlbumMetricsConsumer],
   exports: [AlbumMetricsService],
 })
 export class AlbumMetricsModule {}
