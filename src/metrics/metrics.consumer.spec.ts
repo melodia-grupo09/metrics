@@ -6,7 +6,7 @@ import { AlbumMetric } from './entities/album-metric.entity';
 import { SongMetric } from './entities/song-metric.entity';
 import { UserMetric, UserEventType } from './entities/user-metric.entity';
 
-// Mock amqp-connection-manager to prevent actual RabbitMQ connections
+// Mock amqp-connection-manager
 jest.mock('amqp-connection-manager', () => {
   const mockChannelWrapper = {
     addSetup: jest.fn().mockResolvedValue(undefined),

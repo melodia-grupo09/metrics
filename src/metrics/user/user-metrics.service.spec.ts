@@ -3,6 +3,19 @@ import { getModelToken } from '@nestjs/mongoose';
 import { UserMetricsService } from './user-metrics.service';
 import { UserMetric, UserEventType } from '../entities/user-metric.entity';
 
+// Mock amqp-connection-manager to prevent actual RabbitMQ connections
+const mockRabbitMQ = jest.fn();
+const mockAddSetup = jest.fn(() => Promise.resolve());
+
+jest.mock('amqp-connection-manager', () => ({
+  connect: jest.fn(() => ({
+    createChannel: jest.fn(() => ({
+      addSetup: mockAddSetup,
+      publish: mockRabbitMQ,
+    })),
+  })),
+}));
+
 describe('UserMetricsService', () => {
   let service: UserMetricsService;
 
@@ -19,21 +32,16 @@ describe('UserMetricsService', () => {
   });
   mockModel.prototype.save = jest.fn();
 
-  const mockRabbitClient = {
-    emit: jest.fn(),
-  };
-
   beforeEach(async () => {
+    mockRabbitMQ.mockClear();
+    mockAddSetup.mockClear();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserMetricsService,
         {
           provide: getModelToken(UserMetric.name),
           useValue: mockModel,
-        },
-        {
-          provide: 'METRICS_SERVICE',
-          useValue: mockRabbitClient,
         },
       ],
     }).compile();
@@ -56,14 +64,11 @@ describe('UserMetricsService', () => {
         message: 'User registration recorded',
         userId,
       });
-      expect(mockRabbitClient.emit).toHaveBeenCalledWith(
+      expect(mockRabbitMQ).toHaveBeenCalledTimes(1);
+      expect(mockRabbitMQ).toHaveBeenCalledWith(
+        'metrics_exchange',
         'metrics.user.registration',
-        {
-          userId,
-          eventType: UserEventType.REGISTRATION,
-          metadata,
-          timestamp: expect.any(Date),
-        },
+        expect.any(Buffer),
       );
     });
   });
@@ -79,12 +84,12 @@ describe('UserMetricsService', () => {
         message: 'User login recorded',
         userId,
       });
-      expect(mockRabbitClient.emit).toHaveBeenCalledWith('metrics.user.login', {
-        userId,
-        eventType: UserEventType.LOGIN,
-        metadata,
-        timestamp: expect.any(Date),
-      });
+      expect(mockRabbitMQ).toHaveBeenCalledTimes(1);
+      expect(mockRabbitMQ).toHaveBeenCalledWith(
+        'metrics_exchange',
+        'metrics.user.login',
+        expect.any(Buffer),
+      );
     });
   });
 
@@ -99,14 +104,11 @@ describe('UserMetricsService', () => {
         message: 'User activity recorded',
         userId,
       });
-      expect(mockRabbitClient.emit).toHaveBeenCalledWith(
+      expect(mockRabbitMQ).toHaveBeenCalledTimes(1);
+      expect(mockRabbitMQ).toHaveBeenCalledWith(
+        'metrics_exchange',
         'metrics.user.activity',
-        {
-          userId,
-          eventType: UserEventType.ACTIVITY,
-          metadata,
-          timestamp: expect.any(Date),
-        },
+        expect.any(Buffer),
       );
     });
   });

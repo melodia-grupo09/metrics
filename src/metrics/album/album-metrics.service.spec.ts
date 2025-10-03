@@ -1,14 +1,25 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
 import { AlbumMetricsService } from './album-metrics.service';
 import { AlbumMetric } from '../entities/album-metric.entity';
 import { SongMetric } from '../entities/song-metric.entity';
 
+// Mock amqp-connection-manager
+const mockRabbitMQ = jest.fn();
+const mockAddSetup = jest.fn(() => Promise.resolve());
+
+jest.mock('amqp-connection-manager', () => ({
+  connect: jest.fn(() => ({
+    createChannel: jest.fn(() => ({
+      addSetup: mockAddSetup,
+      publish: mockRabbitMQ,
+    })),
+  })),
+}));
+
 describe('AlbumMetricsService', () => {
   let service: AlbumMetricsService;
-  let rabbitClient: ClientProxy;
 
   const mockAlbumMetricModel = function (dto: any) {
     this.data = dto;
@@ -27,11 +38,9 @@ describe('AlbumMetricsService', () => {
     }),
   };
 
-  const mockRabbitClient = {
-    emit: jest.fn(),
-  };
-
   beforeEach(async () => {
+    mockRabbitMQ.mockClear();
+    mockAddSetup.mockClear();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AlbumMetricsService,
@@ -43,15 +52,10 @@ describe('AlbumMetricsService', () => {
           provide: getModelToken(SongMetric.name),
           useValue: mockSongMetricModel,
         },
-        {
-          provide: 'METRICS_SERVICE',
-          useValue: mockRabbitClient,
-        },
       ],
     }).compile();
 
     service = module.get<AlbumMetricsService>(AlbumMetricsService);
-    rabbitClient = module.get<ClientProxy>('METRICS_SERVICE');
   });
 
   afterEach(() => {
@@ -111,12 +115,11 @@ describe('AlbumMetricsService', () => {
       const result = await service.incrementAlbumLikes(albumId);
 
       expect(result).toEqual({ message: 'Album like recorded' });
-      expect(rabbitClient.emit).toHaveBeenCalledWith(
+      expect(mockRabbitMQ).toHaveBeenCalledTimes(1);
+      expect(mockRabbitMQ).toHaveBeenCalledWith(
+        'metrics_exchange',
         'metrics.album.like',
-        expect.objectContaining({
-          albumId,
-          metricType: 'like',
-        }),
+        expect.any(Buffer),
       );
     });
 
@@ -129,7 +132,7 @@ describe('AlbumMetricsService', () => {
       await expect(service.incrementAlbumLikes(albumId)).rejects.toThrow(
         NotFoundException,
       );
-      expect(rabbitClient.emit).not.toHaveBeenCalled();
+      expect(mockRabbitMQ).not.toHaveBeenCalled();
     });
   });
 
@@ -148,12 +151,11 @@ describe('AlbumMetricsService', () => {
       const result = await service.incrementAlbumShares(albumId);
 
       expect(result).toEqual({ message: 'Album share recorded' });
-      expect(rabbitClient.emit).toHaveBeenCalledWith(
+      expect(mockRabbitMQ).toHaveBeenCalledTimes(1);
+      expect(mockRabbitMQ).toHaveBeenCalledWith(
+        'metrics_exchange',
         'metrics.album.share',
-        expect.objectContaining({
-          albumId,
-          metricType: 'share',
-        }),
+        expect.any(Buffer),
       );
     });
 
@@ -166,7 +168,7 @@ describe('AlbumMetricsService', () => {
       await expect(service.incrementAlbumShares(albumId)).rejects.toThrow(
         NotFoundException,
       );
-      expect(rabbitClient.emit).not.toHaveBeenCalled();
+      expect(mockRabbitMQ).not.toHaveBeenCalled();
     });
   });
 
