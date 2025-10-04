@@ -5,10 +5,22 @@
     <img src="https://github.com/melodia-grupo09/metrics/workflows/CI%2FCD%20Pipeline/badge.svg" alt="CI/CD Status" />
   </a>
   <a href="https://app.codecov.io/github/melodia-grupo09/metrics" target="_blank">
-    <img src="https://codecov.io/github/melodia-grupo09/metrics/branch/master/graph/badge.svg" alt="Coverage Status" />
+    <img src="https://codecov.io/github/melodia-grupo09/metrics/branch/master/graph/badge.svg?token=BQ641ZU5EK" alt="Coverage Status" />
   </a>
   <a href="https://nodejs.org" target="_blank">
     <img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg" alt="Node.js Version" />
+  </a>
+  <a href="https://nestjs.com/" target="_blank">
+    <img src="https://img.shields.io/badge/nestjs-11.0-red.svg" alt="NestJS Version" />
+  </a>
+  <a href="https://www.typescriptlang.org/" target="_blank">
+    <img src="https://img.shields.io/badge/typescript-5.1-blue.svg" alt="TypeScript Version" />
+  </a>
+  <a href="https://www.mongodb.com/" target="_blank">
+    <img src="https://img.shields.io/badge/mongodb-8.0-green.svg" alt="MongoDB Version" />
+  </a>
+  <a href="https://www.rabbitmq.com/" target="_blank">
+    <img src="https://img.shields.io/badge/rabbitmq-4.1-orange.svg" alt="RabbitMQ Version" />
   </a>
 </p>
 
@@ -16,28 +28,17 @@
 
 <p>Metrics microservice for the Melodía platform built with NestJS, RabbitMQ and MongoDB.</p>
 
-## Project setup
-
-```bash
-$ npm install
-```
-
-## Compile and run the project
-
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-```
-
 ## 📊 Coverage y Métricas de Calidad
 
 ### Code Coverage
 
-- ![Coverage](https://codecov.io/github/melodia-grupo09/metrics/branch/master/graph/badge.svg)
+- ![Coverage](https://codecov.io/github/melodia-grupo09/metrics/branch/master/graph/badge.svg?token=BQ641ZU5EK)
 - [Ver reporte detallado](https://app.codecov.io/github/melodia-grupo09/metrics)
+
+<div align="center">
+  <img src="https://codecov.io/github/melodia-grupo09/metrics/graphs/sunburst.svg?token=BQ641ZU5EK" alt="Codecov Sunburst" width="400"/>
+</div>
+
 
 ## RabbitMQ Architecture
 
