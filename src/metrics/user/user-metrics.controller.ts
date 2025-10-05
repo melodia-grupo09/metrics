@@ -58,7 +58,7 @@ export class UserMetricsController {
   }
 
   // Analytics endpoints - The 3 key metrics
-  @ApiOperation({ summary: 'Get new registrations (Nuevos Registros)' })
+  @ApiOperation({ summary: 'Get new registrations' })
   @ApiQuery({ name: 'startDate', required: true, example: '2024-01-01' })
   @ApiQuery({ name: 'endDate', required: true, example: '2024-12-31' })
   @ApiResponse({
@@ -76,7 +76,7 @@ export class UserMetricsController {
     );
   }
 
-  @ApiOperation({ summary: 'Get active users (Usuarios Activos)' })
+  @ApiOperation({ summary: 'Get active users' })
   @ApiQuery({ name: 'startDate', required: true, example: '2024-01-01' })
   @ApiQuery({ name: 'endDate', required: true, example: '2024-12-31' })
   @ApiResponse({
@@ -94,7 +94,7 @@ export class UserMetricsController {
     );
   }
 
-  @ApiOperation({ summary: 'Get user retention (Retención)' })
+  @ApiOperation({ summary: 'Get user retention' })
   @ApiQuery({
     name: 'cohortStartDate',
     required: true,
