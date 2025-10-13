@@ -1,48 +1,51 @@
-# Metrics Microservice
+# Melodía Metrics Service
 
-<p align="center">
-  <a href="https://github.com/melodia-grupo09/metrics/actions/workflows/github-actions.yml" target="_blank">
-    <img src="https://github.com/melodia-grupo09/metrics/workflows/CI%2FCD%20Pipeline/badge.svg" alt="CI/CD Status" />
-  </a>
-  <a href="https://app.codecov.io/github/melodia-grupo09/metrics" target="_blank">
-    <img src="https://codecov.io/github/melodia-grupo09/metrics/branch/master/graph/badge.svg?token=BQ641ZU5EK" alt="Coverage Status" />
-  </a>
-  <a href="https://nodejs.org" target="_blank">
-    <img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg" alt="Node.js Version" />
-  </a>
-  <a href="https://nestjs.com/" target="_blank">
-    <img src="https://img.shields.io/badge/nestjs-11.0-red.svg" alt="NestJS Version" />
-  </a>
-  <a href="https://www.typescriptlang.org/" target="_blank">
-    <img src="https://img.shields.io/badge/typescript-5.1-blue.svg" alt="TypeScript Version" />
-  </a>
-  <a href="https://www.mongodb.com/" target="_blank">
-    <img src="https://img.shields.io/badge/mongodb-8.0-green.svg" alt="MongoDB Version" />
-  </a>
-  <a href="https://www.rabbitmq.com/" target="_blank">
-    <img src="https://img.shields.io/badge/rabbitmq-4.1-orange.svg" alt="RabbitMQ Version" />
-  </a>
-</p>
+<a href="https://github.com/melodia-grupo09/metrics/actions/workflows/github-actions.yml" target="_blank">
+  <img src="https://github.com/melodia-grupo09/metrics/workflows/CI%2FCD%20Pipeline/badge.svg" alt="CI/CD Status" />
+</a>
+<a href="https://app.codecov.io/github/melodia-grupo09/metrics" target="_blank">
+  <img src="https://codecov.io/github/melodia-grupo09/metrics/branch/master/graph/badge.svg?token=BQ641ZU5EK" alt="Coverage Status" />
+</a>
+<a href="https://nodejs.org" target="_blank">
+  <img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg" alt="Node.js Version" />
+</a>
+<a href="https://nestjs.com" target="_blank">
+  <img src="https://img.shields.io/badge/NestJS-11.0-E0234E.svg" alt="NestJS Version" />
+</a>
+<a href="https://www.typescriptlang.org" target="_blank">
+  <img src="https://img.shields.io/badge/TypeScript-5.1-007ACC.svg" alt="TypeScript Version" />
+</a>
+<a href="https://www.mongodb.com" target="_blank">
+  <img src="https://img.shields.io/badge/MongoDB-8.0-47A248.svg" alt="MongoDB Version" />
+</a>
+<a href="https://www.rabbitmq.com" target="_blank">
+  <img src="https://img.shields.io/badge/RabbitMQ-4.1-FF6600.svg" alt="RabbitMQ Version" />
+</a>
 
-## Description
+Metrics microservice built with [**NestJS**](https://nestjs.com/) for the Melodía platform.
 
-<p>Metrics microservice for the Melodía platform built with NestJS, RabbitMQ and MongoDB.</p>
+## Live Deployment
 
-## 📊 Coverage y Métricas de Calidad
+The application is deployed on Heroku and accessible at: [https://melodia-metrics-e9ca6dea743b.herokuapp.com/](https://melodia-metrics-e9ca6dea743b.herokuapp.com/)
 
-### Code Coverage
+## Overview
 
-- ![Coverage](https://codecov.io/github/melodia-grupo09/metrics/branch/master/graph/badge.svg?token=BQ641ZU5EK)
-- [Ver reporte detallado](https://app.codecov.io/github/melodia-grupo09/metrics)
+This Metrics Service provides comprehensive analytics and tracking for the Melodía platform, offering:
 
-<div align="center">
-  <img src="https://codecov.io/github/melodia-grupo09/metrics/graphs/sunburst.svg?token=BQ641ZU5EK" alt="Codecov Sunburst" width="400"/>
-</div>
+- **Real-time Metrics Collection**: Track user interactions, song plays, likes, and shares
+- **RabbitMQ Integration**: Asynchronous message processing for scalable metrics collection
+- **MongoDB Storage**: Efficient storage and querying of metrics data
+- **RESTful API**: Comprehensive endpoints for metrics retrieval and analysis
 
+## Architecture
 
-## RabbitMQ Architecture
+The metrics service follows a microservices architecture pattern with event-driven communication:
 
-#### 1. Architecture
+- **Metrics Collection Layer**: Captures user interactions and system events
+- **RabbitMQ Integration**: Asynchronous message processing for scalable data ingestion
+- **Data Storage Layer**: MongoDB for efficient metrics storage and querying
+
+### RabbitMQ Message Routing
 
 This project uses one queue with one exchange, with one topic and multiple routing keys, the benefits of this approach are:
 
@@ -50,7 +53,7 @@ This project uses one queue with one exchange, with one topic and multiple routi
 - **Better Performance**: Message routing happens at the broker level, which is more efficient
 - **Semantic Routing Keys**: Keys like `metrics.song.play` clearly express intent and message type
 
-#### 2. **Routing Key Structure**
+#### Routing Key Structure
 
 Format: `metrics.<entity>.<action>`
 
@@ -59,6 +62,38 @@ Format: `metrics.<entity>.<action>`
 - **Song metrics**: `metrics.song.play`, `metrics.song.like`, `metrics.song.share`
 - **Album metrics**: `metrics.album.like`, `metrics.album.share`
 - **User metrics**: `metrics.user.registration`, `metrics.user.activity`
+
+## Code Coverage
+
+Comprehensive test coverage tracked automatically via Codecov:
+
+[![Test Coverage](https://codecov.io/github/melodia-grupo09/metrics/branch/master/graph/badge.svg?token=BQ641ZU5EK)](https://codecov.io/github/melodia-grupo09/metrics)
+
+**[View Detailed Coverage Report & Interactive Graphs](https://app.codecov.io/github/melodia-grupo09/metrics)**
+
+<h3>Graph</h3>
+<div align="center">
+  
+  <a href="https://app.codecov.io/github/melodia-grupo09/metrics" target="_blank">
+    <img src="https://codecov.io/github/melodia-grupo09/metrics/graphs/sunburst.svg?token=BQ641ZU5EK" alt="Coverage Sunburst" width="400" />
+  </a>
+  
+</div>
+
+## Dependencies
+
+### Core Framework
+
+- **NestJS**: Modern Node.js framework with TypeScript support
+- **MongoDB**: NoSQL database for scalable metrics storage
+- **RabbitMQ**: Message broker for asynchronous event processing
+- **Mongoose**: MongoDB object modeling for Node.js
+
+### Development & Testing
+
+- **Jest**: Testing framework with mocking capabilities
+- **ESLint**: Code quality and style enforcement
+- **TypeScript**: Type safety and enhanced developer experience
 
 ## TODO Progress
 
