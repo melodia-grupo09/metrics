@@ -5,10 +5,15 @@ import { MetricsService } from './metrics.service';
 import { UserMetricsModule } from './user/user-metrics.module';
 import { SongMetricsModule } from './song/song-metrics.module';
 import { AlbumMetricsModule } from './album/album-metrics.module';
+import { ArtistMetricsModule } from './artist/artist-metrics.module';
 import { RabbitModule } from '../rabbit/rabbit.module';
 import { AlbumMetric, AlbumMetricSchema } from './entities/album-metric.entity';
 import { SongMetric, SongMetricSchema } from './entities/song-metric.entity';
 import { UserMetric, UserMetricSchema } from './entities/user-metric.entity';
+import {
+  ArtistMetric,
+  ArtistMetricSchema,
+} from './entities/artist-metric.entity';
 
 @Module({
   imports: [
@@ -16,11 +21,13 @@ import { UserMetric, UserMetricSchema } from './entities/user-metric.entity';
       { name: AlbumMetric.name, schema: AlbumMetricSchema },
       { name: SongMetric.name, schema: SongMetricSchema },
       { name: UserMetric.name, schema: UserMetricSchema },
+      { name: ArtistMetric.name, schema: ArtistMetricSchema },
     ]),
     RabbitModule,
     UserMetricsModule,
     SongMetricsModule,
     AlbumMetricsModule,
+    ArtistMetricsModule,
   ],
   controllers: [MetricsController],
   providers: [MetricsService],

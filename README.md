@@ -122,7 +122,14 @@ Comprehensive test coverage tracked automatically via Codecov:
 
 ### Artist Metrics
 
-- [ ] **CA1**: Main KPIs (monthly listeners, followers, plays, saves, shares)
+- [x] **CA2**: Monthly listeners metric
+  - Endpoint: `POST /metrics/artists` to create artist
+  - Endpoint: `GET /metrics/artists/:artistId/monthly-listeners` to get monthly listeners
+  - Endpoint: `GET /metrics/artists` to get all artists metrics
+  - **Automatic integration**: When a song play is recorded with `POST /metrics/songs/:songId/plays` (requires `artistId` and `userId` in body), the artist listener is automatically tracked
+  - Tracks unique listeners per day in a 30-day rolling window
+  - Automatic cleanup of data older than 30 days
+- [ ] **CA1**: Additional KPIs (followers, plays, saves, shares)
 - [ ] **CA2**: Filters by period and region
 - [ ] **CA3**: Navigable breakdowns
 - [ ] **CA4**: Update timestamp and data freshness indicators
