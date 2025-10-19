@@ -7,6 +7,8 @@ import { SongMetric } from '../entities/song-metric.entity';
 
 interface SongMetricEvent {
   songId: string;
+  artistId: string;
+  userId: string;
   metricType: 'play' | 'like' | 'share';
   timestamp: Date;
 }
@@ -90,6 +92,31 @@ export class SongMetricsConsumer implements OnModuleInit {
       }
 
       await existingSong.save();
+
+      // Si es un play, publicar evento para el artista
+      if (content.metricType === 'play') {
+        try {
+          const artistEvent = {
+            artistId: content.artistId,
+            userId: content.userId,
+            timestamp: new Date(),
+          };
+
+          await this.channelWrapper.publish(
+            'metrics_exchange',
+            'metrics.artist.listener',
+            Buffer.from(JSON.stringify(artistEvent)),
+          );
+
+          this.logger.log(
+            `Artist listener event published for artist ${content.artistId}`,
+          );
+        } catch (error) {
+          this.logger.error('Error publishing artist listener event:', error);
+          // No fallamos el proceso principal si falla el evento del artista
+        }
+      }
+
       this.channelWrapper.ack(message);
 
       this.logger.log(

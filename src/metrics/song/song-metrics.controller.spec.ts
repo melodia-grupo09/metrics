@@ -45,12 +45,18 @@ describe('SongMetricsController', () => {
   describe('incrementSongPlays', () => {
     it('should increment song plays successfully', async () => {
       const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+      const playDto = {
+        artistId: 'artist-123',
+        userId: 'user-456',
+      };
       const result = { message: 'Song play recorded' };
       mockSongMetricsService.incrementSongPlays.mockResolvedValue(result);
 
-      expect(await controller.incrementSongPlays(songId)).toBe(result);
+      expect(await controller.incrementSongPlays(songId, playDto)).toBe(result);
       expect(mockSongMetricsService.incrementSongPlays).toHaveBeenCalledWith(
         songId,
+        playDto.artistId,
+        playDto.userId,
       );
     });
   });

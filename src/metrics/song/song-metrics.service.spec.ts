@@ -88,31 +88,37 @@ describe('SongMetricsService', () => {
   describe('incrementSongPlays', () => {
     it('should increment song plays successfully', async () => {
       const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+      const artistId = 'artist-123';
+      const userId = 'user-456';
       mockSongMetricModel.findOne.mockReturnValueOnce({
         exec: jest.fn().mockResolvedValue({ songId }),
       });
 
-      const result = await service.incrementSongPlays(songId);
+      const result = await service.incrementSongPlays(songId, artistId, userId);
 
       expect(result).toEqual({ message: 'Song play recorded' });
       expect(mockSongMetricModel.findOne).toHaveBeenCalledWith({ songId });
       expect(mockRabbitMQ).toHaveBeenCalledTimes(1);
-      expect(mockRabbitMQ).toHaveBeenCalledWith(
-        'metrics_exchange',
-        'metrics.song.play',
-        expect.any(Buffer),
-      );
+
+      const callArgs = mockRabbitMQ.mock.calls[0];
+      const publishedData = JSON.parse(callArgs[2].toString() as string);
+      expect(publishedData.songId).toBe(songId);
+      expect(publishedData.artistId).toBe(artistId);
+      expect(publishedData.userId).toBe(userId);
+      expect(publishedData.metricType).toBe('play');
     });
 
     it('should throw NotFoundException if song does not exist', async () => {
       const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+      const artistId = 'artist-123';
+      const userId = 'user-456';
       mockSongMetricModel.findOne.mockReturnValueOnce({
         exec: jest.fn().mockResolvedValue(null),
       });
 
-      await expect(service.incrementSongPlays(songId)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.incrementSongPlays(songId, artistId, userId),
+      ).rejects.toThrow(NotFoundException);
       expect(mockRabbitMQ).not.toHaveBeenCalled();
     });
   });

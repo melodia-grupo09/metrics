@@ -65,13 +65,19 @@ export class SongMetricsService implements OnModuleInit {
     };
   }
 
-  async incrementSongPlays(songId: string) {
+  async incrementSongPlays(songId: string, artistId: string, userId: string) {
     const exists = await this.songExists(songId);
     if (!exists) {
       throw new NotFoundException('Song not found');
     }
 
-    const data = { songId, metricType: 'play', timestamp: new Date() };
+    const data = {
+      songId,
+      artistId,
+      userId,
+      metricType: 'play',
+      timestamp: new Date(),
+    };
 
     await this.channelWrapper.publish(
       'metrics_exchange',

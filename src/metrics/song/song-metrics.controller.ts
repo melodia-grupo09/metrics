@@ -1,6 +1,14 @@
-import { Controller, Get, Post, Param, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  ParseUUIDPipe,
+  Body,
+} from '@nestjs/common';
 import { SongMetricsService } from './song-metrics.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { SongPlayDto } from './dto/song-play.dto';
 
 @ApiTags('song-metrics')
 @Controller('metrics/songs')
@@ -24,9 +32,17 @@ export class SongMetricsController {
     description: 'Song play recorded successfully',
   })
   @ApiResponse({ status: 404, description: 'Song not found' })
+  @ApiResponse({ status: 400, description: 'Invalid request body' })
   @Post(':songId/plays')
-  async incrementSongPlays(@Param('songId', ParseUUIDPipe) songId: string) {
-    return this.songMetricsService.incrementSongPlays(songId);
+  async incrementSongPlays(
+    @Param('songId', ParseUUIDPipe) songId: string,
+    @Body() playDto: SongPlayDto,
+  ) {
+    return this.songMetricsService.incrementSongPlays(
+      songId,
+      playDto.artistId,
+      playDto.userId,
+    );
   }
 
   @ApiOperation({ summary: 'Increment song likes' })

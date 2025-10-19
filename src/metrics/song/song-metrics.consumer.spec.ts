@@ -71,6 +71,8 @@ describe('SongMetricsConsumer', () => {
 
     it('should increment song plays when processing play metric', async () => {
       const songId = 'test-song-id';
+      const artistId = 'artist-123';
+      const userId = 'user-456';
       const existingSong = {
         songId,
         plays: 5,
@@ -85,6 +87,8 @@ describe('SongMetricsConsumer', () => {
 
       const message = createMockMessage({
         songId,
+        artistId,
+        userId,
         metricType: 'play',
         timestamp: new Date(),
       });
@@ -94,6 +98,52 @@ describe('SongMetricsConsumer', () => {
       expect(mockSongModel.findOne).toHaveBeenCalledWith({ songId });
       expect(existingSong.plays).toBe(6);
       expect(existingSong.save).toHaveBeenCalled();
+    });
+
+    it('should publish artist listener event when processing play', async () => {
+      const songId = 'test-song-id';
+      const artistId = 'artist-123';
+      const userId = 'user-456';
+      const existingSong = {
+        songId,
+        plays: 5,
+        likes: 2,
+        shares: 1,
+        save: jest.fn().mockResolvedValue(true),
+      };
+
+      mockSongModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(existingSong),
+      });
+
+      const mockChannelWrapper = {
+        ack: jest.fn(),
+        publish: jest.fn(),
+      };
+      (consumer as any).channelWrapper = mockChannelWrapper;
+
+      const message = createMockMessage({
+        songId,
+        artistId,
+        userId,
+        metricType: 'play',
+        timestamp: new Date(),
+      });
+
+      await consumer.handleSongMetric(message);
+
+      expect(existingSong.plays).toBe(6);
+      expect(existingSong.save).toHaveBeenCalled();
+      expect(mockChannelWrapper.publish).toHaveBeenCalledWith(
+        'metrics_exchange',
+        'metrics.artist.listener',
+        expect.any(Buffer),
+      );
+
+      const publishCall = mockChannelWrapper.publish.mock.calls[0];
+      const publishedData = JSON.parse(publishCall[2].toString());
+      expect(publishedData.artistId).toBe(artistId);
+      expect(publishedData.userId).toBe(userId);
     });
 
     it('should increment song likes when processing like metric', async () => {
