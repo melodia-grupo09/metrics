@@ -4,7 +4,6 @@ import {
   Post,
   Body,
   Param,
-  ParseUUIDPipe,
   Query,
   ParseIntPipe,
   DefaultValuePipe,
@@ -25,7 +24,7 @@ export class UserMetricsController {
   })
   @Post(':userId/registration')
   recordRegistration(
-    @Param('userId', ParseUUIDPipe) userId: string,
+    @Param('userId') userId: string,
     @Body() metadata?: Record<string, any>,
   ) {
     return this.userMetricsService.recordRegistration(userId, metadata);
@@ -38,7 +37,7 @@ export class UserMetricsController {
   })
   @Post(':userId/login')
   recordLogin(
-    @Param('userId', ParseUUIDPipe) userId: string,
+    @Param('userId') userId: string,
     @Body() metadata?: Record<string, any>,
   ) {
     return this.userMetricsService.recordLogin(userId, metadata);
@@ -51,7 +50,7 @@ export class UserMetricsController {
   })
   @Post(':userId/activity')
   recordActivity(
-    @Param('userId', ParseUUIDPipe) userId: string,
+    @Param('userId') userId: string,
     @Body() metadata?: Record<string, any>,
   ) {
     return this.userMetricsService.recordActivity(userId, metadata);

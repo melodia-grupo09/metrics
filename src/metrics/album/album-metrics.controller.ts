@@ -1,4 +1,4 @@
-import { Controller, Post, Param, ParseUUIDPipe, Body } from '@nestjs/common';
+import { Controller, Post, Param, Body } from '@nestjs/common';
 import { AlbumMetricsService } from './album-metrics.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 
@@ -14,7 +14,7 @@ export class AlbumMetricsController {
   })
   @ApiResponse({ status: 400, description: 'Album already exists' })
   @Post(':albumId')
-  createAlbum(@Param('albumId', ParseUUIDPipe) albumId: string) {
+  createAlbum(@Param('albumId') albumId: string) {
     return this.albumMetricsService.createAlbum(albumId);
   }
 
@@ -22,7 +22,7 @@ export class AlbumMetricsController {
   @ApiResponse({ status: 200, description: 'Album like recorded successfully' })
   @ApiResponse({ status: 404, description: 'Album not found' })
   @Post(':albumId/likes')
-  incrementAlbumLikes(@Param('albumId', ParseUUIDPipe) albumId: string) {
+  incrementAlbumLikes(@Param('albumId') albumId: string) {
     return this.albumMetricsService.incrementAlbumLikes(albumId);
   }
 
@@ -33,7 +33,7 @@ export class AlbumMetricsController {
   })
   @ApiResponse({ status: 404, description: 'Album not found' })
   @Post(':albumId/shares')
-  incrementAlbumShares(@Param('albumId', ParseUUIDPipe) albumId: string) {
+  incrementAlbumShares(@Param('albumId') albumId: string) {
     return this.albumMetricsService.incrementAlbumShares(albumId);
   }
 
@@ -48,18 +48,15 @@ export class AlbumMetricsController {
       properties: {
         songIds: {
           type: 'array',
-          items: { type: 'string', format: 'uuid' },
-          example: [
-            'f47ac10b-58cc-4372-a567-0e02b2c3d479',
-            '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
-          ],
+          items: { type: 'string' },
+          example: ['song123', 'song456'],
         },
       },
     },
   })
   @Post(':albumId/metrics')
   async getAlbumMetrics(
-    @Param('albumId', ParseUUIDPipe) albumId: string,
+    @Param('albumId') albumId: string,
     @Body('songIds') songIds?: string[],
   ) {
     return await this.albumMetricsService.getAlbumMetrics(albumId, songIds);

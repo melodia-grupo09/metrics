@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Param,
-  ParseUUIDPipe,
-  Body,
-} from '@nestjs/common';
+import { Controller, Get, Post, Param, Body } from '@nestjs/common';
 import { SongMetricsService } from './song-metrics.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { SongPlayDto } from './dto/song-play.dto';
@@ -22,7 +15,7 @@ export class SongMetricsController {
   })
   @ApiResponse({ status: 400, description: 'Song already exists' })
   @Post(':songId')
-  async createSong(@Param('songId', ParseUUIDPipe) songId: string) {
+  async createSong(@Param('songId') songId: string) {
     return this.songMetricsService.createSong(songId);
   }
 
@@ -35,7 +28,7 @@ export class SongMetricsController {
   @ApiResponse({ status: 400, description: 'Invalid request body' })
   @Post(':songId/plays')
   async incrementSongPlays(
-    @Param('songId', ParseUUIDPipe) songId: string,
+    @Param('songId') songId: string,
     @Body() playDto: SongPlayDto,
   ) {
     return this.songMetricsService.incrementSongPlays(
@@ -49,7 +42,7 @@ export class SongMetricsController {
   @ApiResponse({ status: 200, description: 'Song like recorded successfully' })
   @ApiResponse({ status: 404, description: 'Song not found' })
   @Post(':songId/likes')
-  async incrementSongLikes(@Param('songId', ParseUUIDPipe) songId: string) {
+  async incrementSongLikes(@Param('songId') songId: string) {
     return this.songMetricsService.incrementSongLikes(songId);
   }
 
@@ -60,7 +53,7 @@ export class SongMetricsController {
   })
   @ApiResponse({ status: 404, description: 'Song not found' })
   @Post(':songId/shares')
-  async incrementSongShares(@Param('songId', ParseUUIDPipe) songId: string) {
+  async incrementSongShares(@Param('songId') songId: string) {
     return this.songMetricsService.incrementSongShares(songId);
   }
 
@@ -68,7 +61,7 @@ export class SongMetricsController {
   @ApiResponse({ status: 200, description: 'Metrics retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Song not found' })
   @Get(':songId')
-  async getSongMetrics(@Param('songId', ParseUUIDPipe) songId: string) {
+  async getSongMetrics(@Param('songId') songId: string) {
     return this.songMetricsService.getSongMetrics(songId);
   }
 }
