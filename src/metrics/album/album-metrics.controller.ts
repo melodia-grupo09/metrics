@@ -1,4 +1,4 @@
-import { Controller, Post, Param, Body, Query } from '@nestjs/common';
+import { Controller, Post, Param, Body, Query, Get } from '@nestjs/common';
 import { AlbumMetricsService } from './album-metrics.service';
 import {
   ApiTags,
@@ -68,7 +68,7 @@ export class AlbumMetricsController {
     return await this.albumMetricsService.getAlbumMetrics(albumId, songIds);
   }
 
-  @ApiOperation({ summary: 'Get top albums by plays' })
+  @ApiOperation({ summary: 'Get top albums by likes' })
   @ApiResponse({
     status: 200,
     description: 'Top albums retrieved successfully',
@@ -79,34 +79,9 @@ export class AlbumMetricsController {
     type: Number,
     description: 'Number of top albums to return (default: 10)',
   })
-  @ApiBody({
-    description:
-      'Mapping of album IDs to their song IDs to calculate total plays',
-    required: true,
-    schema: {
-      type: 'object',
-      properties: {
-        albumSongs: {
-          type: 'object',
-          additionalProperties: {
-            type: 'array',
-            items: { type: 'string' },
-          },
-          example: {
-            album123: ['song1', 'song2', 'song3'],
-            album456: ['song4', 'song5'],
-          },
-        },
-      },
-    },
-  })
-  @Post('top')
-  async getTopAlbums(
-    @Query('limit') limit?: number,
-    @Body('albumSongs') albumSongs?: Record<string, string[]>,
-  ) {
+  @Get()
+  async getTopAlbums(@Query('limit') limit?: number) {
     const parsedLimit = limit ? parseInt(limit.toString(), 10) : 10;
-    const songMapping = albumSongs || {};
-    return this.albumMetricsService.getTopAlbums(parsedLimit, songMapping);
+    return this.albumMetricsService.getTopAlbums(parsedLimit);
   }
 }

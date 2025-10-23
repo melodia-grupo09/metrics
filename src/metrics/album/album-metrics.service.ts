@@ -127,36 +127,17 @@ export class AlbumMetricsService implements OnModuleInit {
     };
   }
 
-  async getTopAlbums(
-    limit: number = 10,
-    songIdsByAlbum: Record<string, string[]>,
-  ) {
-    // Get all albums
-    const albums = await this.albumMetricModel.find({}).exec();
+  async getTopAlbums(limit: number = 10) {
+    const topAlbums = await this.albumMetricModel
+      .find({})
+      .sort({ likes: -1 })
+      .limit(limit)
+      .exec();
 
-    // Calculate total plays for each album
-    const albumsWithPlays = await Promise.all(
-      albums.map(async (album) => {
-        const songIds = songIdsByAlbum[album.albumId] || [];
-        let totalPlays = 0;
-
-        if (songIds.length > 0) {
-          const songs = await this.songMetricModel
-            .find({ songId: { $in: songIds } })
-            .exec();
-          totalPlays = songs.reduce((sum, song) => sum + song.plays, 0);
-        }
-
-        return {
-          albumId: album.albumId,
-          plays: totalPlays,
-          likes: album.likes,
-          shares: album.shares,
-        };
-      }),
-    );
-
-    // Sort by plays and limit
-    return albumsWithPlays.sort((a, b) => b.plays - a.plays).slice(0, limit);
+    return topAlbums.map((album) => ({
+      albumId: album.albumId,
+      likes: album.likes,
+      shares: album.shares,
+    }));
   }
 }
