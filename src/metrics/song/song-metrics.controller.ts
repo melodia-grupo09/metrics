@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
 import { SongMetricsService } from './song-metrics.service';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { SongPlayDto } from './dto/song-play.dto';
 
 @ApiTags('song-metrics')
@@ -63,5 +63,22 @@ export class SongMetricsController {
   @Get(':songId')
   async getSongMetrics(@Param('songId') songId: string) {
     return this.songMetricsService.getSongMetrics(songId);
+  }
+
+  @ApiOperation({ summary: 'Get top songs by plays' })
+  @ApiResponse({
+    status: 200,
+    description: 'Top songs retrieved successfully',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Number of top songs to return (default: 10)',
+  })
+  @Get()
+  async getTopSongs(@Query('limit') limit?: number) {
+    const parsedLimit = limit ? parseInt(limit.toString(), 10) : 10;
+    return this.songMetricsService.getTopSongs(parsedLimit);
   }
 }

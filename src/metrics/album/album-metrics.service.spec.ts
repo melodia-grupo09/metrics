@@ -30,6 +30,9 @@ describe('AlbumMetricsService', () => {
     findOne: jest.fn().mockReturnValue({
       exec: jest.fn(),
     }),
+    find: jest.fn().mockReturnValue({
+      exec: jest.fn(),
+    }),
   };
 
   const mockSongMetricModel = {
@@ -241,6 +244,151 @@ describe('AlbumMetricsService', () => {
       await expect(service.getAlbumMetrics(albumId)).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('getTopAlbums', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should return top albums sorted by total plays', async () => {
+      const mockAlbums = [
+        { albumId: 'album1', likes: 10, shares: 5 },
+        { albumId: 'album2', likes: 8, shares: 3 },
+      ];
+      const mockSongs = [
+        { songId: 'song1', plays: 100 },
+        { songId: 'song2', plays: 50 },
+        { songId: 'song3', plays: 75 },
+      ];
+      const songIdsByAlbum = {
+        album1: ['song1', 'song2'],
+        album2: ['song3'],
+      };
+
+      // Reset the mock to avoid interference from previous tests
+      jest.clearAllMocks();
+
+      mockAlbumModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAlbums),
+      });
+
+      // Mock song queries for each album
+      mockSongMetricModel.find
+        .mockReturnValueOnce({
+          exec: jest.fn().mockResolvedValue([mockSongs[0], mockSongs[1]]),
+        })
+        .mockReturnValueOnce({
+          exec: jest.fn().mockResolvedValue([mockSongs[2]]),
+        });
+
+      const result = await service.getTopAlbums(10, songIdsByAlbum);
+
+      expect(result).toEqual([
+        { albumId: 'album1', plays: 150, likes: 10, shares: 5 },
+        { albumId: 'album2', plays: 75, likes: 8, shares: 3 },
+      ]);
+    });
+
+    it('should handle albums with no songs', async () => {
+      const mockAlbums = [
+        { albumId: 'album1', likes: 10, shares: 5 },
+        { albumId: 'album2', likes: 8, shares: 3 },
+      ];
+      const songIdsByAlbum = {
+        album1: [],
+        album2: [],
+      };
+
+      jest.clearAllMocks();
+      mockAlbumModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAlbums),
+      });
+
+      const result = await service.getTopAlbums(10, songIdsByAlbum);
+
+      expect(result).toEqual([
+        { albumId: 'album1', plays: 0, likes: 10, shares: 5 },
+        { albumId: 'album2', plays: 0, likes: 8, shares: 3 },
+      ]);
+      expect(mockSongMetricModel.find).not.toHaveBeenCalled();
+    });
+
+    it('should handle albums not in the mapping', async () => {
+      const mockAlbums = [{ albumId: 'album1', likes: 10, shares: 5 }];
+      const songIdsByAlbum = {};
+
+      jest.clearAllMocks();
+      mockAlbumModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAlbums),
+      });
+
+      const result = await service.getTopAlbums(10, songIdsByAlbum);
+
+      expect(result).toEqual([
+        { albumId: 'album1', plays: 0, likes: 10, shares: 5 },
+      ]);
+    });
+
+    it('should limit results correctly', async () => {
+      const mockAlbums = [
+        { albumId: 'album1', likes: 10, shares: 5 },
+        { albumId: 'album2', likes: 8, shares: 3 },
+        { albumId: 'album3', likes: 6, shares: 2 },
+      ];
+      const songIdsByAlbum = {
+        album1: ['song1'],
+        album2: ['song2'],
+        album3: ['song3'],
+      };
+
+      jest.clearAllMocks();
+      mockAlbumModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAlbums),
+      });
+
+      mockSongMetricModel.find
+        .mockReturnValueOnce({
+          exec: jest.fn().mockResolvedValue([{ songId: 'song1', plays: 100 }]),
+        })
+        .mockReturnValueOnce({
+          exec: jest.fn().mockResolvedValue([{ songId: 'song2', plays: 75 }]),
+        })
+        .mockReturnValueOnce({
+          exec: jest.fn().mockResolvedValue([{ songId: 'song3', plays: 50 }]),
+        });
+
+      const result = await service.getTopAlbums(2, songIdsByAlbum);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({
+        albumId: 'album1',
+        plays: 100,
+        likes: 10,
+        shares: 5,
+      });
+      expect(result[1]).toEqual({
+        albumId: 'album2',
+        plays: 75,
+        likes: 8,
+        shares: 3,
+      });
+    });
+
+    it('should use default limit when none provided', async () => {
+      const mockAlbums = [];
+      const songIdsByAlbum = {};
+
+      jest.clearAllMocks();
+      mockAlbumModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAlbums),
+      });
+
+      await service.getTopAlbums(undefined, songIdsByAlbum);
+
+      // The method should work with default limit of 10
+      expect(mockAlbumModel.find).toHaveBeenCalledWith({});
     });
   });
 });

@@ -136,4 +136,19 @@ export class SongMetricsService implements OnModuleInit {
       shares: metrics.shares,
     };
   }
+
+  async getTopSongs(limit: number = 10) {
+    const topSongs = await this.songMetricModel
+      .find({})
+      .sort({ plays: -1 })
+      .limit(limit)
+      .exec();
+
+    return topSongs.map((song) => ({
+      songId: song.songId,
+      plays: song.plays,
+      likes: song.likes,
+      shares: song.shares,
+    }));
+  }
 }

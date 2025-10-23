@@ -222,4 +222,75 @@ describe('SongMetricsService', () => {
       );
     });
   });
+
+  describe('getTopSongs', () => {
+    it('should return top songs sorted by plays', async () => {
+      const mockSongs = [
+        { songId: 'song1', plays: 100, likes: 50, shares: 25 },
+        { songId: 'song2', plays: 90, likes: 40, shares: 20 },
+        { songId: 'song3', plays: 80, likes: 30, shares: 15 },
+      ];
+
+      mockSongMetricModel.find.mockReturnValueOnce({
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockSongs),
+      });
+
+      const result = await service.getTopSongs(10);
+
+      expect(result).toEqual([
+        { songId: 'song1', plays: 100, likes: 50, shares: 25 },
+        { songId: 'song2', plays: 90, likes: 40, shares: 20 },
+        { songId: 'song3', plays: 80, likes: 30, shares: 15 },
+      ]);
+      expect(mockSongMetricModel.find).toHaveBeenCalledWith({});
+    });
+
+    it('should use default limit of 10 when no limit provided', async () => {
+      const mockSongs = [];
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockSongs),
+      };
+
+      mockSongMetricModel.find.mockReturnValueOnce(mockQuery);
+
+      await service.getTopSongs();
+
+      expect(mockSongMetricModel.find).toHaveBeenCalledWith({});
+      expect(mockQuery.sort).toHaveBeenCalledWith({ plays: -1 });
+      expect(mockQuery.limit).toHaveBeenCalledWith(10);
+    });
+
+    it('should use custom limit when provided', async () => {
+      const mockSongs = [];
+      const mockQuery = {
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(mockSongs),
+      };
+
+      mockSongMetricModel.find.mockReturnValueOnce(mockQuery);
+
+      await service.getTopSongs(5);
+
+      expect(mockSongMetricModel.find).toHaveBeenCalledWith({});
+      expect(mockQuery.sort).toHaveBeenCalledWith({ plays: -1 });
+      expect(mockQuery.limit).toHaveBeenCalledWith(5);
+    });
+
+    it('should return empty array when no songs found', async () => {
+      mockSongMetricModel.find.mockReturnValueOnce({
+        sort: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue([]),
+      });
+
+      const result = await service.getTopSongs(10);
+
+      expect(result).toEqual([]);
+    });
+  });
 });

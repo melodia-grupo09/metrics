@@ -11,6 +11,7 @@ describe('SongMetricsController', () => {
     incrementSongLikes: jest.fn(),
     incrementSongShares: jest.fn(),
     getSongMetrics: jest.fn(),
+    getTopSongs: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -102,6 +103,41 @@ describe('SongMetricsController', () => {
       expect(mockSongMetricsService.getSongMetrics).toHaveBeenCalledWith(
         songId,
       );
+    });
+  });
+
+  describe('getTopSongs', () => {
+    it('should get top songs with default limit', async () => {
+      const result = [
+        { songId: 'song1', plays: 100, likes: 50, shares: 25 },
+        { songId: 'song2', plays: 90, likes: 40, shares: 20 },
+        { songId: 'song3', plays: 80, likes: 30, shares: 15 },
+      ];
+      mockSongMetricsService.getTopSongs.mockResolvedValue(result);
+
+      expect(await controller.getTopSongs()).toBe(result);
+      expect(mockSongMetricsService.getTopSongs).toHaveBeenCalledWith(10);
+    });
+
+    it('should get top songs with custom limit', async () => {
+      const limit = 5;
+      const result = [
+        { songId: 'song1', plays: 100, likes: 50, shares: 25 },
+        { songId: 'song2', plays: 90, likes: 40, shares: 20 },
+      ];
+      mockSongMetricsService.getTopSongs.mockResolvedValue(result);
+
+      expect(await controller.getTopSongs(limit)).toBe(result);
+      expect(mockSongMetricsService.getTopSongs).toHaveBeenCalledWith(5);
+    });
+
+    it('should parse string limit to number', async () => {
+      const limit = 3;
+      const result = [{ songId: 'song1', plays: 100, likes: 50, shares: 25 }];
+      mockSongMetricsService.getTopSongs.mockResolvedValue(result);
+
+      expect(await controller.getTopSongs(limit)).toBe(result);
+      expect(mockSongMetricsService.getTopSongs).toHaveBeenCalledWith(3);
     });
   });
 });

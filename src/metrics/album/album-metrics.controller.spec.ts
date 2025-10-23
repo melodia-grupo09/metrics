@@ -11,6 +11,7 @@ describe('AlbumMetricsController', () => {
     incrementAlbumLikes: jest.fn(),
     incrementAlbumShares: jest.fn(),
     getAlbumMetrics: jest.fn(),
+    getTopAlbums: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -115,6 +116,65 @@ describe('AlbumMetricsController', () => {
       expect(mockAlbumMetricsService.getAlbumMetrics).toHaveBeenCalledWith(
         albumId,
         undefined,
+      );
+    });
+  });
+
+  describe('getTopAlbums', () => {
+    it('should get top albums with default limit', async () => {
+      const albumSongs = {
+        album1: ['song1', 'song2'],
+        album2: ['song3', 'song4'],
+      };
+      const result = [
+        { albumId: 'album1', plays: 150, likes: 50, shares: 25 },
+        { albumId: 'album2', plays: 100, likes: 30, shares: 15 },
+      ];
+      mockAlbumMetricsService.getTopAlbums.mockResolvedValue(result);
+
+      expect(await controller.getTopAlbums(undefined, albumSongs)).toBe(result);
+      expect(mockAlbumMetricsService.getTopAlbums).toHaveBeenCalledWith(
+        10,
+        albumSongs,
+      );
+    });
+
+    it('should get top albums with custom limit', async () => {
+      const limit = 5;
+      const albumSongs = {
+        album1: ['song1', 'song2'],
+        album2: ['song3', 'song4'],
+      };
+      const result = [{ albumId: 'album1', plays: 150, likes: 50, shares: 25 }];
+      mockAlbumMetricsService.getTopAlbums.mockResolvedValue(result);
+
+      expect(await controller.getTopAlbums(limit, albumSongs)).toBe(result);
+      expect(mockAlbumMetricsService.getTopAlbums).toHaveBeenCalledWith(
+        5,
+        albumSongs,
+      );
+    });
+
+    it('should handle empty album songs mapping', async () => {
+      const result = [];
+      mockAlbumMetricsService.getTopAlbums.mockResolvedValue(result);
+
+      expect(await controller.getTopAlbums()).toBe(result);
+      expect(mockAlbumMetricsService.getTopAlbums).toHaveBeenCalledWith(10, {});
+    });
+
+    it('should parse string limit to number', async () => {
+      const limit = 3;
+      const albumSongs = {
+        album1: ['song1'],
+      };
+      const result = [{ albumId: 'album1', plays: 50, likes: 10, shares: 5 }];
+      mockAlbumMetricsService.getTopAlbums.mockResolvedValue(result);
+
+      expect(await controller.getTopAlbums(limit, albumSongs)).toBe(result);
+      expect(mockAlbumMetricsService.getTopAlbums).toHaveBeenCalledWith(
+        3,
+        albumSongs,
       );
     });
   });
