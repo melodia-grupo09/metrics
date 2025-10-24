@@ -33,6 +33,9 @@ describe('AlbumMetricsService', () => {
     find: jest.fn().mockReturnValue({
       exec: jest.fn(),
     }),
+    deleteOne: jest.fn().mockReturnValue({
+      exec: jest.fn(),
+    }),
   };
 
   const mockSongMetricModel = {
@@ -315,6 +318,41 @@ describe('AlbumMetricsService', () => {
       const result = await service.getTopAlbums(10);
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('deleteAlbum', () => {
+    it('should delete an album successfully', async () => {
+      const albumId = 'album123';
+      const mockAlbum = { albumId, likes: 10, shares: 5 };
+
+      mockAlbumModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAlbum),
+      });
+
+      mockAlbumModel.deleteOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+      });
+
+      const result = await service.deleteAlbum(albumId);
+
+      expect(mockAlbumModel.findOne).toHaveBeenCalledWith({ albumId });
+      expect(mockAlbumModel.deleteOne).toHaveBeenCalledWith({ albumId });
+      expect(result).toEqual({ message: 'Album deleted successfully' });
+    });
+
+    it('should throw NotFoundException when album does not exist', async () => {
+      const albumId = 'nonexistent-album';
+
+      mockAlbumModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      await expect(service.deleteAlbum(albumId)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(mockAlbumModel.findOne).toHaveBeenCalledWith({ albumId });
+      expect(mockAlbumModel.deleteOne).not.toHaveBeenCalled();
     });
   });
 });

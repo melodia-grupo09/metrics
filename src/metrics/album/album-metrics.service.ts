@@ -140,4 +140,15 @@ export class AlbumMetricsService implements OnModuleInit {
       shares: album.shares,
     }));
   }
+
+  async deleteAlbum(albumId: string) {
+    const metric = await this.albumMetricModel.findOne({ albumId }).exec();
+
+    if (!metric) {
+      throw new NotFoundException('Album not found');
+    }
+
+    await this.albumMetricModel.deleteOne({ albumId }).exec();
+    return { message: 'Album deleted successfully' };
+  }
 }

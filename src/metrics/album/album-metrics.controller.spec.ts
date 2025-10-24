@@ -12,6 +12,7 @@ describe('AlbumMetricsController', () => {
     incrementAlbumShares: jest.fn(),
     getAlbumMetrics: jest.fn(),
     getTopAlbums: jest.fn(),
+    deleteAlbum: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -148,6 +149,17 @@ describe('AlbumMetricsController', () => {
 
       expect(await controller.getTopAlbums(limit)).toBe(result);
       expect(mockAlbumMetricsService.getTopAlbums).toHaveBeenCalledWith(3);
+    });
+  });
+
+  describe('deleteAlbum', () => {
+    it('should delete an album', async () => {
+      const albumId = 'album123';
+      const result = { message: 'Album deleted successfully' };
+      mockAlbumMetricsService.deleteAlbum.mockResolvedValue(result);
+
+      expect(await controller.deleteAlbum(albumId)).toBe(result);
+      expect(mockAlbumMetricsService.deleteAlbum).toHaveBeenCalledWith(albumId);
     });
   });
 });

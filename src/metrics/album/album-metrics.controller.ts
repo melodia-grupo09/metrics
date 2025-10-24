@@ -1,4 +1,14 @@
-import { Controller, Post, Param, Body, Query, Get } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Delete,
+  Param,
+  Body,
+  Query,
+  Get,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { AlbumMetricsService } from './album-metrics.service';
 import {
   ApiTags,
@@ -6,6 +16,7 @@ import {
   ApiResponse,
   ApiBody,
   ApiQuery,
+  ApiParam,
 } from '@nestjs/swagger';
 
 @ApiTags('album-metrics')
@@ -83,5 +94,23 @@ export class AlbumMetricsController {
   async getTopAlbums(@Query('limit') limit?: number) {
     const parsedLimit = limit ? parseInt(limit.toString(), 10) : 10;
     return this.albumMetricsService.getTopAlbums(parsedLimit);
+  }
+
+  @ApiOperation({ summary: 'Delete an album' })
+  @ApiResponse({
+    status: 200,
+    description: 'Album deleted successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Album not found' })
+  @ApiParam({
+    name: 'albumId',
+    type: 'string',
+    description: 'Unique identifier for the album',
+    example: 'album-123',
+  })
+  @Delete(':albumId')
+  @HttpCode(HttpStatus.OK)
+  async deleteAlbum(@Param('albumId') albumId: string) {
+    return this.albumMetricsService.deleteAlbum(albumId);
   }
 }

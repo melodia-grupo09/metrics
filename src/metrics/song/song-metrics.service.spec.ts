@@ -32,6 +32,9 @@ describe('SongMetricsService', () => {
       find: jest.fn().mockReturnValue({
         exec: jest.fn(),
       }),
+      deleteOne: jest.fn().mockReturnValue({
+        exec: jest.fn(),
+      }),
     };
 
     const MockSongMetric = jest.fn().mockImplementation((dto) => ({
@@ -291,6 +294,41 @@ describe('SongMetricsService', () => {
       const result = await service.getTopSongs(10);
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('deleteSong', () => {
+    it('should delete a song successfully', async () => {
+      const songId = 'song123';
+      const mockSong = { songId, plays: 10, likes: 5, shares: 2 };
+
+      mockSongMetricModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockSong),
+      });
+
+      mockSongMetricModel.deleteOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+      });
+
+      const result = await service.deleteSong(songId);
+
+      expect(mockSongMetricModel.findOne).toHaveBeenCalledWith({ songId });
+      expect(mockSongMetricModel.deleteOne).toHaveBeenCalledWith({ songId });
+      expect(result).toEqual({ message: 'Song deleted successfully' });
+    });
+
+    it('should throw NotFoundException when song does not exist', async () => {
+      const songId = 'nonexistent-song';
+
+      mockSongMetricModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      await expect(service.deleteSong(songId)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(mockSongMetricModel.findOne).toHaveBeenCalledWith({ songId });
+      expect(mockSongMetricModel.deleteOne).not.toHaveBeenCalled();
     });
   });
 });

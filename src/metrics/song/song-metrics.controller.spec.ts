@@ -12,6 +12,7 @@ describe('SongMetricsController', () => {
     incrementSongShares: jest.fn(),
     getSongMetrics: jest.fn(),
     getTopSongs: jest.fn(),
+    deleteSong: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -138,6 +139,17 @@ describe('SongMetricsController', () => {
 
       expect(await controller.getTopSongs(limit)).toBe(result);
       expect(mockSongMetricsService.getTopSongs).toHaveBeenCalledWith(3);
+    });
+  });
+
+  describe('deleteSong', () => {
+    it('should delete a song', async () => {
+      const songId = 'song123';
+      const result = { message: 'Song deleted successfully' };
+      mockSongMetricsService.deleteSong.mockResolvedValue(result);
+
+      expect(await controller.deleteSong(songId)).toBe(result);
+      expect(mockSongMetricsService.deleteSong).toHaveBeenCalledWith(songId);
     });
   });
 });

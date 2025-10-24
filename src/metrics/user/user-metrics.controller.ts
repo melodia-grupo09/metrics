@@ -2,13 +2,22 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Body,
   Param,
   Query,
   ParseIntPipe,
   DefaultValuePipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiQuery,
+  ApiParam,
+} from '@nestjs/swagger';
 import { UserMetricsService } from './user-metrics.service';
 
 @ApiTags('user-metrics')
@@ -122,5 +131,23 @@ export class UserMetricsController {
       new Date(cohortEndDate),
       daysAfter,
     );
+  }
+
+  @ApiOperation({ summary: 'Delete user metrics' })
+  @ApiResponse({
+    status: 200,
+    description: 'User metrics deleted successfully',
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiParam({
+    name: 'userId',
+    type: 'string',
+    description: 'Unique identifier for the user',
+    example: 'user-123',
+  })
+  @Delete(':userId')
+  @HttpCode(HttpStatus.OK)
+  deleteUser(@Param('userId') userId: string) {
+    return this.userMetricsService.deleteUser(userId);
   }
 }

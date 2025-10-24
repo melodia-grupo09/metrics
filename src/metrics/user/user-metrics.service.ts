@@ -1,4 +1,9 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import amqp, { ChannelWrapper } from 'amqp-connection-manager';
@@ -200,5 +205,16 @@ export class UserMetricsService implements OnModuleInit {
       cohortEndDate,
       daysAfter,
     };
+  }
+
+  async deleteUser(userId: string) {
+    const userEvents = await this.userEventModel.find({ userId }).exec();
+
+    if (userEvents.length === 0) {
+      throw new NotFoundException('User not found');
+    }
+
+    await this.userEventModel.deleteMany({ userId }).exec();
+    return { message: 'User metrics deleted successfully' };
   }
 }

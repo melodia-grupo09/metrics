@@ -151,4 +151,15 @@ export class SongMetricsService implements OnModuleInit {
       shares: song.shares,
     }));
   }
+
+  async deleteSong(songId: string) {
+    const metric = await this.songMetricModel.findOne({ songId }).exec();
+
+    if (!metric) {
+      throw new NotFoundException('Song not found');
+    }
+
+    await this.songMetricModel.deleteOne({ songId }).exec();
+    return { message: 'Song deleted successfully' };
+  }
 }

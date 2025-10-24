@@ -1,6 +1,22 @@
-import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Delete,
+  Param,
+  Body,
+  Query,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { SongMetricsService } from './song-metrics.service';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiQuery,
+  ApiParam,
+} from '@nestjs/swagger';
 import { SongPlayDto } from './dto/song-play.dto';
 
 @ApiTags('song-metrics')
@@ -80,5 +96,23 @@ export class SongMetricsController {
   async getTopSongs(@Query('limit') limit?: number) {
     const parsedLimit = limit ? parseInt(limit.toString(), 10) : 10;
     return this.songMetricsService.getTopSongs(parsedLimit);
+  }
+
+  @ApiOperation({ summary: 'Delete a song' })
+  @ApiResponse({
+    status: 200,
+    description: 'Song deleted successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Song not found' })
+  @ApiParam({
+    name: 'songId',
+    type: 'string',
+    description: 'Unique identifier for the song',
+    example: 'song-123',
+  })
+  @Delete(':songId')
+  @HttpCode(HttpStatus.OK)
+  async deleteSong(@Param('songId') songId: string) {
+    return this.songMetricsService.deleteSong(songId);
   }
 }

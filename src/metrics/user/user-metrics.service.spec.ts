@@ -30,6 +30,12 @@ describe('UserMetricsService', () => {
   mockModel.distinct = jest.fn().mockReturnValue({
     exec: jest.fn(),
   });
+  mockModel.find = jest.fn().mockReturnValue({
+    exec: jest.fn(),
+  });
+  mockModel.deleteMany = jest.fn().mockReturnValue({
+    exec: jest.fn(),
+  });
   mockModel.prototype.save = jest.fn();
 
   beforeEach(async () => {
@@ -214,6 +220,43 @@ describe('UserMetricsService', () => {
         cohortEndDate,
         daysAfter: 7,
       });
+    });
+  });
+
+  describe('deleteUser', () => {
+    it('should delete user metrics successfully', async () => {
+      const userId = 'user123';
+      const mockUserEvents = [
+        { userId, eventType: 'registration', timestamp: new Date() },
+      ];
+
+      mockModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockUserEvents),
+      });
+
+      mockModel.deleteMany.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+      });
+
+      const result = await service.deleteUser(userId);
+
+      expect(mockModel.find).toHaveBeenCalledWith({ userId });
+      expect(mockModel.deleteMany).toHaveBeenCalledWith({ userId });
+      expect(result).toEqual({ message: 'User metrics deleted successfully' });
+    });
+
+    it('should throw NotFoundException when user does not exist', async () => {
+      const userId = 'nonexistent-user';
+
+      mockModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([]),
+      });
+
+      await expect(service.deleteUser(userId)).rejects.toThrow(
+        'User not found',
+      );
+      expect(mockModel.find).toHaveBeenCalledWith({ userId });
+      expect(mockModel.deleteMany).not.toHaveBeenCalled();
     });
   });
 });

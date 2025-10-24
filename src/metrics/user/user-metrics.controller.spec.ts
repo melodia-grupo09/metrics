@@ -12,6 +12,7 @@ describe('UserMetricsController', () => {
     getNewRegistrations: jest.fn(),
     getActiveUsers: jest.fn(),
     getUserRetention: jest.fn(),
+    deleteUser: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -177,6 +178,17 @@ describe('UserMetricsController', () => {
         new Date(cohortEndDate),
         7,
       );
+    });
+  });
+
+  describe('deleteUser', () => {
+    it('should delete user metrics', async () => {
+      const userId = 'user123';
+      const result = { message: 'User metrics deleted successfully' };
+      mockUserMetricsService.deleteUser.mockResolvedValue(result);
+
+      expect(await controller.deleteUser(userId)).toBe(result);
+      expect(mockUserMetricsService.deleteUser).toHaveBeenCalledWith(userId);
     });
   });
 });
