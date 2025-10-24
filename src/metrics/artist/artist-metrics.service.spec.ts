@@ -42,6 +42,7 @@ describe('ArtistMetricsService', () => {
       find: jest.fn().mockReturnValue({
         exec: jest.fn(),
       }),
+      aggregate: jest.fn(),
       deleteOne: jest.fn().mockReturnValue({
         exec: jest.fn(),
       }),
@@ -226,6 +227,116 @@ describe('ArtistMetricsService', () => {
       await expect(service.deleteArtist(artistId)).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('getTopArtists', () => {
+    it('should return top artists with default limit', async () => {
+      const mockAggregateResult = [
+        {
+          artistId: 'artist-1',
+          monthlyListeners: 1500,
+          lastUpdated: new Date('2023-01-01'),
+        },
+        {
+          artistId: 'artist-2',
+          monthlyListeners: 1200,
+          lastUpdated: new Date('2023-01-02'),
+        },
+      ];
+
+      mockArtistMetricModel.aggregate.mockResolvedValue(mockAggregateResult);
+
+      const result = await service.getTopArtists();
+
+      expect(result).toEqual(mockAggregateResult);
+      expect(mockArtistMetricModel.aggregate).toHaveBeenCalledWith([
+        { $unwind: { path: '$listeners', preserveNullAndEmptyArrays: true } },
+        {
+          $match: {
+            $or: [
+              { listeners: { $exists: false } },
+              { 'listeners.timestamp': { $gte: expect.any(Date) } },
+            ],
+          },
+        },
+        {
+          $group: {
+            _id: {
+              artistId: '$artistId',
+              userId: '$listeners.userId',
+            },
+            timestamp: { $first: '$timestamp' },
+          },
+        },
+        {
+          $group: {
+            _id: '$_id.artistId',
+            monthlyListeners: {
+              $sum: {
+                $cond: [{ $ne: ['$_id.userId', null] }, 1, 0],
+              },
+            },
+            lastUpdated: { $first: '$timestamp' },
+          },
+        },
+        { $sort: { monthlyListeners: -1 } },
+        { $limit: 10 },
+        {
+          $project: {
+            _id: 0,
+            artistId: '$_id',
+            monthlyListeners: 1,
+            lastUpdated: 1,
+          },
+        },
+      ]);
+    });
+
+    it('should return top artists with custom limit', async () => {
+      const limit = 5;
+      const mockAggregateResult = [
+        {
+          artistId: 'artist-1',
+          monthlyListeners: 1500,
+          lastUpdated: new Date('2023-01-01'),
+        },
+      ];
+
+      mockArtistMetricModel.aggregate.mockResolvedValue(mockAggregateResult);
+
+      const result = await service.getTopArtists(limit);
+
+      expect(result).toEqual(mockAggregateResult);
+      expect(mockArtistMetricModel.aggregate).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ $limit: 5 })]),
+      );
+    });
+
+    it('should return empty array when no artists exist', async () => {
+      mockArtistMetricModel.aggregate.mockResolvedValue([]);
+
+      const result = await service.getTopArtists();
+
+      expect(result).toEqual([]);
+      expect(mockArtistMetricModel.aggregate).toHaveBeenCalled();
+    });
+
+    it('should handle artists with no listeners', async () => {
+      const mockAggregateResult = [
+        {
+          artistId: 'artist-no-listeners',
+          monthlyListeners: 0,
+          lastUpdated: new Date('2023-01-01'),
+        },
+      ];
+
+      mockArtistMetricModel.aggregate.mockResolvedValue(mockAggregateResult);
+
+      const result = await service.getTopArtists();
+
+      expect(result).toEqual(mockAggregateResult);
+      expect(mockArtistMetricModel.aggregate).toHaveBeenCalled();
     });
   });
 });

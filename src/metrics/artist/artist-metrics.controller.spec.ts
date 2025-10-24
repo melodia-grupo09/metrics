@@ -17,6 +17,7 @@ describe('ArtistMetricsController', () => {
             addListener: jest.fn(),
             getMonthlyListeners: jest.fn(),
             getAllArtistsMetrics: jest.fn(),
+            getTopArtists: jest.fn(),
             deleteArtist: jest.fn(),
           },
         },
@@ -80,6 +81,8 @@ describe('ArtistMetricsController', () => {
         {
           artistId: 'artist-123',
           monthlyListeners: 100,
+          periodStart: new Date(),
+          periodEnd: new Date(),
           lastUpdated: new Date(),
         },
       ];
@@ -88,6 +91,75 @@ describe('ArtistMetricsController', () => {
 
       expect(await controller.getAllArtistsMetrics()).toEqual(result);
       expect(service.getAllArtistsMetrics).toHaveBeenCalled();
+    });
+  });
+
+  describe('getTopArtists', () => {
+    it('should get top artists with default limit', async () => {
+      const result = [
+        {
+          artistId: 'artist-123',
+          monthlyListeners: 1500,
+          lastUpdated: new Date('2023-01-01'),
+        },
+        {
+          artistId: 'artist-456',
+          monthlyListeners: 1200,
+          lastUpdated: new Date('2023-01-02'),
+        },
+      ];
+
+      jest.spyOn(service, 'getTopArtists').mockResolvedValue(result);
+
+      expect(await controller.getTopArtists()).toBe(result);
+      expect(service.getTopArtists).toHaveBeenCalledWith(10);
+    });
+
+    it('should get top artists with custom limit', async () => {
+      const limit = 5;
+      const result = [
+        {
+          artistId: 'artist-123',
+          monthlyListeners: 1500,
+          lastUpdated: new Date('2023-01-01'),
+        },
+      ];
+
+      jest.spyOn(service, 'getTopArtists').mockResolvedValue(result);
+
+      expect(await controller.getTopArtists(limit)).toBe(result);
+      expect(service.getTopArtists).toHaveBeenCalledWith(5);
+    });
+
+    it('should parse string limit to number', async () => {
+      const limit = 15; // Parsed from string query param
+      const result = [
+        {
+          artistId: 'artist-789',
+          monthlyListeners: 800,
+          lastUpdated: new Date('2023-01-03'),
+        },
+      ];
+
+      jest.spyOn(service, 'getTopArtists').mockResolvedValue(result);
+
+      expect(await controller.getTopArtists(limit)).toBe(result);
+      expect(service.getTopArtists).toHaveBeenCalledWith(15);
+    });
+
+    it('should handle undefined limit and use default', async () => {
+      const result = [
+        {
+          artistId: 'artist-default',
+          monthlyListeners: 500,
+          lastUpdated: new Date('2023-01-04'),
+        },
+      ];
+
+      jest.spyOn(service, 'getTopArtists').mockResolvedValue(result);
+
+      expect(await controller.getTopArtists(undefined)).toBe(result);
+      expect(service.getTopArtists).toHaveBeenCalledWith(10);
     });
   });
 
