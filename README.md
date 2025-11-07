@@ -116,9 +116,20 @@ Comprehensive test coverage tracked automatically via Codecov:
 ### User Metrics
 
 - [x] User registration and activity tracking
-- [ ] **CA1**: Dashboard endpoints with key metrics
-- [ ] **CA2**: Metrics export (CSV/Excel)
-- [ ] **CA3**: Detailed user metrics breakdown
+  - **Registration**: `POST /metrics/users/:userId/registration` - User signup events
+  - **Login**: `POST /metrics/users/:userId/login` - User authentication events
+  - **Activity**: `POST /metrics/users/:userId/activity` - General user interactions (likes, follows, playlist creation, searches, saves, shares)
+  - **Song Plays**: Automatically tracked via RabbitMQ when songs are played
+- [x] **CA1**: Dashboard endpoints with key metrics
+  - Endpoints: `GET /metrics/users/analytics/registrations`, `/active`, `/retention`
+  - Core user analytics (registrations, active users, retention)
+- [x] **CA2**: Metrics export (CSV/JSON)
+  - Endpoint: `GET /metrics/users/export` with format parameter
+  - Supports CSV and JSON export formats
+- [x] **CA3**: Detailed user metrics breakdown
+  - Endpoint: `GET /metrics/users/:userId/analytics/content` - Top songs and artists per user
+  - Endpoint: `GET /metrics/users/:userId/analytics/patterns` - Activity patterns and listening behavior
+  - User play tracking for content analytics
 
 ### Artist Metrics
 
