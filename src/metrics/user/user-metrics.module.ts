@@ -4,12 +4,14 @@ import { UserMetricsController } from './user-metrics.controller';
 import { UserMetricsService } from './user-metrics.service';
 import { UserMetricsConsumer } from './user-metrics.consumer';
 import { UserMetric, UserMetricSchema } from '../entities/user-metric.entity';
+import { UserPlay, UserPlaySchema } from '../entities/user-play.entity';
 import { RabbitModule } from '../../rabbit/rabbit.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: UserMetric.name, schema: UserMetricSchema },
+      { name: UserPlay.name, schema: UserPlaySchema },
     ]),
     RabbitModule,
   ],

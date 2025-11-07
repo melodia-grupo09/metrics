@@ -93,7 +93,6 @@ export class SongMetricsConsumer implements OnModuleInit {
 
       await existingSong.save();
 
-      // Si es un play, publicar evento para el artista
       if (content.metricType === 'play') {
         try {
           const artistEvent = {
@@ -110,6 +109,24 @@ export class SongMetricsConsumer implements OnModuleInit {
 
           this.logger.log(
             `Artist listener event published for artist ${content.artistId}`,
+          );
+
+          // Publicar evento de play del usuario
+          const userPlayEvent = {
+            userId: content.userId,
+            songId: content.songId,
+            artistId: content.artistId,
+            timestamp: new Date(),
+          };
+
+          await this.channelWrapper.publish(
+            'metrics_exchange',
+            'metrics.user.play',
+            Buffer.from(JSON.stringify(userPlayEvent)),
+          );
+
+          this.logger.log(
+            `User play event published for user ${content.userId}`,
           );
         } catch (error) {
           this.logger.error('Error publishing artist listener event:', error);

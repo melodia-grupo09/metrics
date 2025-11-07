@@ -133,6 +133,94 @@ export class UserMetricsController {
     );
   }
 
+  @ApiOperation({ summary: 'Get user content preferences and listening stats' })
+  @ApiParam({
+    name: 'userId',
+    type: 'string',
+    description: 'Unique identifier for the user',
+    example: 'user-123',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    example: '2024-01-01',
+    description: 'Start date for filtering (optional)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    example: '2024-12-31',
+    description: 'End date for filtering (optional)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User content analytics retrieved',
+    schema: {
+      example: {
+        userId: 'user-123',
+        period: {
+          startDate: '2024-01-01',
+          endDate: '2024-12-31',
+        },
+        topSongs: [
+          { songId: 'song-456', plays: 45 },
+          { songId: 'song-789', plays: 32 },
+        ],
+        topArtists: [
+          { artistId: 'artist-123', totalPlays: 156 },
+          { artistId: 'artist-456', totalPlays: 89 },
+        ],
+        listeningStats: {
+          totalPlays: 287,
+          estimatedHours: 16.74,
+        },
+      },
+    },
+  })
+  @Get(':userId/analytics/content')
+  getUserContentAnalytics(
+    @Param('userId') userId: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.userMetricsService.getUserContentAnalytics(
+      userId,
+      startDate ? new Date(startDate) : undefined,
+      endDate ? new Date(endDate) : undefined,
+    );
+  }
+
+  @ApiOperation({ summary: 'Get user activity patterns' })
+  @ApiParam({
+    name: 'userId',
+    type: 'string',
+    description: 'Unique identifier for the user',
+    example: 'user-123',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User activity patterns retrieved',
+    schema: {
+      example: {
+        userId: 'user-123',
+        activityPatterns: {
+          peakHours: [
+            { hour: 20, count: 45 },
+            { hour: 14, count: 32 },
+            { hour: 9, count: 28 },
+          ],
+          totalActivities: 287,
+          activeDays: 35,
+          averageActivitiesPerDay: 8.2,
+        },
+      },
+    },
+  })
+  @Get(':userId/analytics/patterns')
+  getUserActivityPatterns(@Param('userId') userId: string) {
+    return this.userMetricsService.getUserActivityPatterns(userId);
+  }
+
   @ApiOperation({ summary: 'Delete user metrics' })
   @ApiResponse({
     status: 200,

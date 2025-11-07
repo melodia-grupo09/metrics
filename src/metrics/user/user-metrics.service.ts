@@ -9,6 +9,7 @@ import { Model } from 'mongoose';
 import amqp, { ChannelWrapper } from 'amqp-connection-manager';
 import { ConfirmChannel } from 'amqplib';
 import { UserMetric, UserEventType } from '../entities/user-metric.entity';
+import { UserPlay } from '../entities/user-play.entity';
 
 @Injectable()
 export class UserMetricsService implements OnModuleInit {
@@ -18,6 +19,8 @@ export class UserMetricsService implements OnModuleInit {
   constructor(
     @InjectModel(UserMetric.name)
     private userEventModel: Model<UserMetric>,
+    @InjectModel(UserPlay.name)
+    private userPlayModel: Model<UserPlay>,
   ) {
     const rabbitUrl =
       process.env.CLOUDAMQP_URL ||
@@ -215,6 +218,151 @@ export class UserMetricsService implements OnModuleInit {
     }
 
     await this.userEventModel.deleteMany({ userId }).exec();
+    await this.userPlayModel.deleteMany({ userId }).exec();
     return { message: 'User metrics deleted successfully' };
+  }
+
+  // CA3: Detalle de métricas - Consumo de contenido
+  async getUserContentAnalytics(
+    userId: string,
+    startDate?: Date,
+    endDate?: Date,
+  ) {
+    // Build query filter
+    interface DateFilter {
+      userId: string;
+      timestamp?: {
+        $gte?: Date;
+        $lte?: Date;
+      };
+    }
+
+    const dateFilter: DateFilter = { userId };
+    if (startDate || endDate) {
+      dateFilter.timestamp = {};
+      if (startDate) dateFilter.timestamp.$gte = startDate;
+      if (endDate) dateFilter.timestamp.$lte = endDate;
+    }
+
+    // Top canciones del usuario
+    const topSongs = await this.userPlayModel.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: '$songId',
+          plays: { $sum: 1 },
+        },
+      },
+      { $sort: { plays: -1 } },
+      { $limit: 10 },
+      {
+        $project: {
+          _id: 0,
+          songId: '$_id',
+          plays: '$plays',
+        },
+      },
+    ]);
+
+    // Top artistas del usuario
+    const topArtists = await this.userPlayModel.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: '$artistId',
+          totalPlays: { $sum: 1 },
+        },
+      },
+      { $sort: { totalPlays: -1 } },
+      { $limit: 10 },
+      {
+        $project: {
+          _id: 0,
+          artistId: '$_id',
+          totalPlays: '$totalPlays',
+        },
+      },
+    ]);
+
+    // Total de plays y estimación de horas de escucha
+    const totalPlays = await this.userPlayModel.countDocuments(dateFilter);
+    // Asumiendo 3.5 minutos promedio por canción
+    const estimatedListeningMinutes = totalPlays * 3.5;
+    const estimatedListeningHours =
+      Math.round((estimatedListeningMinutes / 60) * 100) / 100;
+
+    return {
+      userId,
+      period: {
+        startDate: startDate || null,
+        endDate: endDate || null,
+      },
+      topSongs,
+      topArtists,
+      listeningStats: {
+        totalPlays,
+        estimatedHours: estimatedListeningHours,
+      },
+    };
+  }
+
+  // CA3: Detalle de métricas - Patrones de uso
+  async getUserActivityPatterns(userId: string) {
+    // Analizar horarios de mayor actividad desde login/activity events
+    const activityByHour = await this.userEventModel.aggregate<{
+      hour: number;
+      count: number;
+    }>([
+      {
+        $match: {
+          userId,
+          eventType: { $in: [UserEventType.LOGIN, UserEventType.ACTIVITY] },
+        },
+      },
+      {
+        $group: {
+          _id: { $hour: '$timestamp' },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { count: -1 } },
+      {
+        $project: {
+          _id: 0,
+          hour: '$_id',
+          count: '$count',
+        },
+      },
+    ]);
+
+    const totalActivities = activityByHour.reduce(
+      (sum, item) => sum + item.count,
+      0,
+    );
+
+    // Calcular días activos
+    const distinctDays = await this.userEventModel.distinct('timestamp', {
+      userId,
+      eventType: { $in: [UserEventType.LOGIN, UserEventType.ACTIVITY] },
+    });
+
+    const uniqueDays = new Set(
+      distinctDays.map((date) => new Date(date).toISOString().split('T')[0]),
+    ).size;
+
+    const averageActivitiesPerDay =
+      uniqueDays > 0
+        ? Math.round((totalActivities / uniqueDays) * 100) / 100
+        : 0;
+
+    return {
+      userId,
+      activityPatterns: {
+        peakHours: activityByHour.slice(0, 5), // Top 5 horas más activas
+        totalActivities,
+        activeDays: uniqueDays,
+        averageActivitiesPerDay,
+      },
+    };
   }
 }

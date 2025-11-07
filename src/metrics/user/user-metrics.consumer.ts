@@ -4,11 +4,19 @@ import { ConfirmChannel, ConsumeMessage } from 'amqplib';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { UserMetric, UserEventType } from '../entities/user-metric.entity';
+import { UserPlay } from '../entities/user-play.entity';
 
 interface UserEventMessage {
   userId: string;
   eventType: UserEventType;
   metadata?: Record<string, any>;
+  timestamp: Date;
+}
+
+interface UserPlayMessage {
+  userId: string;
+  songId: string;
+  artistId: string;
   timestamp: Date;
 }
 
@@ -20,6 +28,8 @@ export class UserMetricsConsumer implements OnModuleInit {
   constructor(
     @InjectModel(UserMetric.name)
     private userEventModel: Model<UserMetric>,
+    @InjectModel(UserPlay.name)
+    private userPlayModel: Model<UserPlay>,
   ) {
     const rabbitUrl =
       process.env.CLOUDAMQP_URL ||
@@ -57,6 +67,33 @@ export class UserMetricsConsumer implements OnModuleInit {
 
   public async handleUserEvent(message: ConsumeMessage) {
     try {
+      const routingKey = message.fields.routingKey;
+
+      if (routingKey === 'metrics.user.play') {
+        const playContent = JSON.parse(
+          message.content.toString(),
+        ) as UserPlayMessage;
+
+        this.logger.log(
+          `Processing user play: song ${playContent.songId} for user ${playContent.userId}`,
+        );
+
+        const userPlay = new this.userPlayModel({
+          userId: playContent.userId,
+          songId: playContent.songId,
+          artistId: playContent.artistId,
+          timestamp: playContent.timestamp || new Date(),
+        });
+
+        await userPlay.save();
+        this.channelWrapper.ack(message);
+
+        this.logger.log(
+          `User play recorded: song ${playContent.songId} for user ${playContent.userId}`,
+        );
+        return;
+      }
+
       const content = JSON.parse(
         message.content.toString(),
       ) as UserEventMessage;
