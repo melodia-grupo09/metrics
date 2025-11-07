@@ -10,6 +10,7 @@ import amqp, { ChannelWrapper } from 'amqp-connection-manager';
 import { ConfirmChannel } from 'amqplib';
 import { UserMetric, UserEventType } from '../entities/user-metric.entity';
 import { UserPlay } from '../entities/user-play.entity';
+import { parse } from 'json2csv';
 
 @Injectable()
 export class UserMetricsService implements OnModuleInit {
@@ -363,6 +364,81 @@ export class UserMetricsService implements OnModuleInit {
         activeDays: uniqueDays,
         averageActivitiesPerDay,
       },
+    };
+  }
+
+  // CA2
+  async exportUserMetrics(
+    startDate: Date,
+    endDate: Date,
+    format: 'csv' | 'json' = 'csv',
+  ) {
+    const registrations = await this.getNewRegistrations(startDate, endDate);
+    const activeUsers = await this.getActiveUsers(startDate, endDate);
+    const retention = await this.getUserRetention(startDate, endDate, 7);
+
+    const userEvents = await this.userEventModel
+      .find({
+        eventType: UserEventType.REGISTRATION,
+        timestamp: { $gte: startDate, $lte: endDate },
+      })
+      .sort({ timestamp: 1 })
+      .exec();
+
+    const data = {
+      summary: {
+        period: {
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        },
+        metrics: {
+          totalRegistrations: registrations.totalRegistrations,
+          activeUsers: activeUsers.activeUsers,
+          retentionRate: retention.retentionRate,
+          totalRetained: retention.retainedUsers,
+        },
+      },
+      users: userEvents.map((event) => ({
+        userId: event.userId,
+        registrationDate: event.timestamp.toISOString(),
+        metadata: event.metadata || {},
+      })),
+    };
+
+    if (format === 'json') {
+      return data;
+    }
+
+    const summaryFields = [
+      'startDate',
+      'endDate',
+      'totalRegistrations',
+      'activeUsers',
+      'retentionRate',
+      'totalRetained',
+    ];
+
+    const summaryData = [
+      {
+        startDate: data.summary.period.startDate,
+        endDate: data.summary.period.endDate,
+        totalRegistrations: data.summary.metrics.totalRegistrations,
+        activeUsers: data.summary.metrics.activeUsers,
+        retentionRate: data.summary.metrics.retentionRate,
+        totalRetained: data.summary.metrics.totalRetained,
+      },
+    ];
+
+    const summaryCsv = parse(summaryData, { fields: summaryFields });
+
+    // CSV de usuarios
+    const usersFields = ['userId', 'registrationDate', 'metadata'];
+    const usersCsv = parse(data.users, { fields: usersFields });
+
+    return {
+      summary: summaryCsv,
+      users: usersCsv,
+      format: 'csv',
     };
   }
 }

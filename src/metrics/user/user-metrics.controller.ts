@@ -221,6 +221,63 @@ export class UserMetricsController {
     return this.userMetricsService.getUserActivityPatterns(userId);
   }
 
+  // CA2
+  @ApiOperation({ summary: 'Export user metrics to CSV or JSON' })
+  @ApiQuery({
+    name: 'startDate',
+    required: true,
+    example: '2024-01-01',
+    description: 'Start date for export',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: true,
+    example: '2024-12-31',
+    description: 'End date for export',
+  })
+  @ApiQuery({
+    name: 'format',
+    required: false,
+    enum: ['csv', 'json'],
+    example: 'csv',
+    description: 'Export format (csv or json)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Metrics exported successfully',
+    schema: {
+      oneOf: [
+        {
+          type: 'object',
+          properties: {
+            summary: { type: 'string', description: 'CSV summary data' },
+            users: { type: 'string', description: 'CSV users data' },
+            format: { type: 'string', example: 'csv' },
+          },
+        },
+        {
+          type: 'object',
+          properties: {
+            summary: { type: 'object' },
+            users: { type: 'array' },
+          },
+        },
+      ],
+    },
+  })
+  @Get('export')
+  exportUserMetrics(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Query('format') format?: 'csv' | 'json',
+  ) {
+    return this.userMetricsService.exportUserMetrics(
+      new Date(startDate),
+      new Date(endDate),
+      format || 'csv',
+    );
+  }
+
   @ApiOperation({ summary: 'Delete user metrics' })
   @ApiResponse({
     status: 200,

@@ -491,4 +491,143 @@ describe('UserMetricsService', () => {
       });
     });
   });
+
+  describe('exportUserMetrics', () => {
+    it('should export user metrics in JSON format', async () => {
+      const startDate = new Date('2024-01-01');
+      const endDate = new Date('2024-12-31');
+
+      mockModel.countDocuments.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(5),
+      });
+
+      mockModel.distinct
+        .mockReturnValueOnce({
+          exec: jest.fn().mockResolvedValue(['user1', 'user2', 'user3']),
+        })
+        .mockReturnValueOnce({
+          exec: jest.fn().mockResolvedValue(['user1', 'user2']),
+        })
+        .mockReturnValueOnce({
+          exec: jest.fn().mockResolvedValue(['user1']),
+        });
+
+      mockModel.find.mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue([
+            {
+              userId: 'user1',
+              timestamp: new Date('2024-01-15'),
+              metadata: { email: 'user1@test.com' },
+            },
+            {
+              userId: 'user2',
+              timestamp: new Date('2024-02-20'),
+              metadata: { email: 'user2@test.com' },
+            },
+          ]),
+        }),
+      });
+
+      const result = await service.exportUserMetrics(
+        startDate,
+        endDate,
+        'json',
+      );
+
+      expect(result).toHaveProperty('summary');
+      expect(result).toHaveProperty('users');
+
+      // Type guard for JSON format
+      if (typeof result.summary === 'object') {
+        expect(result.summary.metrics.totalRegistrations).toBe(5);
+        expect(result.summary.metrics.activeUsers).toBe(3);
+      }
+
+      if (Array.isArray(result.users)) {
+        expect(result.users).toHaveLength(2);
+        expect(result.users[0]).toEqual({
+          userId: 'user1',
+          registrationDate: new Date('2024-01-15').toISOString(),
+          metadata: { email: 'user1@test.com' },
+        });
+      }
+    });
+
+    it('should export user metrics in CSV format', async () => {
+      const startDate = new Date('2024-01-01');
+      const endDate = new Date('2024-12-31');
+
+      mockModel.countDocuments.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(2),
+      });
+
+      mockModel.distinct
+        .mockReturnValueOnce({
+          exec: jest.fn().mockResolvedValue(['user1', 'user2']),
+        })
+        .mockReturnValueOnce({
+          exec: jest.fn().mockResolvedValue(['user1']),
+        })
+        .mockReturnValueOnce({
+          exec: jest.fn().mockResolvedValue(['user1']),
+        });
+
+      mockModel.find.mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue([
+            {
+              userId: 'user1',
+              timestamp: new Date('2024-01-15'),
+              metadata: {},
+            },
+          ]),
+        }),
+      });
+
+      const result = await service.exportUserMetrics(startDate, endDate, 'csv');
+
+      expect(result).toHaveProperty('summary');
+      expect(result).toHaveProperty('users');
+      expect(result).toHaveProperty('format', 'csv');
+      expect(typeof result.summary).toBe('string');
+      expect(typeof result.users).toBe('string');
+      expect(result.summary).toContain('startDate');
+      expect(result.summary).toContain('totalRegistrations');
+      expect(result.users).toContain('userId');
+      expect(result.users).toContain('registrationDate');
+    });
+
+    it('should default to CSV format when format not specified', async () => {
+      const startDate = new Date('2024-01-01');
+      const endDate = new Date('2024-12-31');
+
+      mockModel.countDocuments.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(1),
+      });
+
+      mockModel.distinct
+        .mockReturnValueOnce({
+          exec: jest.fn().mockResolvedValue(['user1']),
+        })
+        .mockReturnValueOnce({
+          exec: jest.fn().mockResolvedValue(['user1']),
+        })
+        .mockReturnValueOnce({
+          exec: jest.fn().mockResolvedValue(['user1']),
+        });
+
+      mockModel.find.mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue([]),
+        }),
+      });
+
+      const result = await service.exportUserMetrics(startDate, endDate);
+
+      expect(result).toHaveProperty('format', 'csv');
+      expect(typeof result.summary).toBe('string');
+      expect(typeof result.users).toBe('string');
+    });
+  });
 });
