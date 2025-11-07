@@ -3,6 +3,7 @@ import { getModelToken } from '@nestjs/mongoose';
 import { Logger } from '@nestjs/common';
 import { UserMetricsConsumer } from './user-metrics.consumer';
 import { UserMetric, UserEventType } from '../entities/user-metric.entity';
+import { UserPlay } from '../entities/user-play.entity';
 
 // Mock amqp-connection-manager
 jest.mock('amqp-connection-manager', () => {
@@ -24,6 +25,7 @@ jest.mock('amqp-connection-manager', () => {
 describe('UserMetricsConsumer', () => {
   let consumer: UserMetricsConsumer;
   let mockUserModel: any;
+  let mockUserPlayModel: any;
 
   beforeAll(() => {
     jest.spyOn(Logger.prototype, 'log').mockImplementation();
@@ -45,6 +47,7 @@ describe('UserMetricsConsumer', () => {
     };
 
     mockUserModel = createMockModel();
+    mockUserPlayModel = createMockModel();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -52,6 +55,10 @@ describe('UserMetricsConsumer', () => {
         {
           provide: getModelToken(UserMetric.name),
           useValue: mockUserModel,
+        },
+        {
+          provide: getModelToken(UserPlay.name),
+          useValue: mockUserPlayModel,
         },
       ],
     }).compile();
@@ -64,9 +71,13 @@ describe('UserMetricsConsumer', () => {
   });
 
   describe('handleUserEvent', () => {
-    const createMockMessage = (content: any) =>
+    const createMockMessage = (
+      content: any,
+      routingKey = 'metrics.user.registration',
+    ) =>
       ({
         content: Buffer.from(JSON.stringify(content)),
+        fields: { routingKey },
       }) as any;
 
     it('should record user registration event', async () => {
@@ -133,6 +144,33 @@ describe('UserMetricsConsumer', () => {
         metadata,
         timestamp: expect.any(String),
       });
+    });
+
+    it('should record user play event', async () => {
+      const userId = 'test-user-id';
+      const songId = 'song-123';
+      const artistId = 'artist-456';
+      const timestamp = new Date();
+
+      const message = createMockMessage(
+        {
+          userId,
+          songId,
+          artistId,
+          timestamp,
+        },
+        'metrics.user.play',
+      );
+
+      await consumer.handleUserEvent(message);
+
+      expect(mockUserPlayModel).toHaveBeenCalledWith({
+        userId,
+        songId,
+        artistId,
+        timestamp: expect.any(String),
+      });
+      expect(mockUserModel).not.toHaveBeenCalled();
     });
 
     it('should handle missing metadata gracefully', async () => {

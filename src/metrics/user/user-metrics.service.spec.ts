@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { UserMetricsService } from './user-metrics.service';
 import { UserMetric, UserEventType } from '../entities/user-metric.entity';
+import { UserPlay } from '../entities/user-play.entity';
 
 // Mock amqp-connection-manager
 const mockRabbitMQ = jest.fn();
@@ -36,7 +37,20 @@ describe('UserMetricsService', () => {
   mockModel.deleteMany = jest.fn().mockReturnValue({
     exec: jest.fn(),
   });
+  mockModel.aggregate = jest.fn().mockReturnValue(Promise.resolve([]));
   mockModel.prototype.save = jest.fn();
+
+  const mockUserPlayModel = function (dto: any) {
+    this.data = dto;
+    this.save = jest.fn().mockResolvedValue(this.data);
+    return this;
+  };
+  mockUserPlayModel.countDocuments = jest.fn();
+  mockUserPlayModel.aggregate = jest.fn().mockReturnValue(Promise.resolve([]));
+  mockUserPlayModel.deleteMany = jest.fn().mockReturnValue({
+    exec: jest.fn(),
+  });
+  mockUserPlayModel.prototype.save = jest.fn();
 
   beforeEach(async () => {
     mockRabbitMQ.mockClear();
@@ -48,6 +62,10 @@ describe('UserMetricsService', () => {
         {
           provide: getModelToken(UserMetric.name),
           useValue: mockModel,
+        },
+        {
+          provide: getModelToken(UserPlay.name),
+          useValue: mockUserPlayModel,
         },
       ],
     }).compile();
@@ -238,10 +256,15 @@ describe('UserMetricsService', () => {
         exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
       });
 
+      mockUserPlayModel.deleteMany.mockReturnValue({
+        exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+      });
+
       const result = await service.deleteUser(userId);
 
       expect(mockModel.find).toHaveBeenCalledWith({ userId });
       expect(mockModel.deleteMany).toHaveBeenCalledWith({ userId });
+      expect(mockUserPlayModel.deleteMany).toHaveBeenCalledWith({ userId });
       expect(result).toEqual({ message: 'User metrics deleted successfully' });
     });
 
@@ -257,6 +280,215 @@ describe('UserMetricsService', () => {
       );
       expect(mockModel.find).toHaveBeenCalledWith({ userId });
       expect(mockModel.deleteMany).not.toHaveBeenCalled();
+      expect(mockUserPlayModel.deleteMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getUserContentAnalytics', () => {
+    it('should get user content analytics without date filters', async () => {
+      const userId = 'user-test-123';
+
+      const mockTopSongs = [
+        { songId: 'song-001', plays: 5 },
+        { songId: 'song-002', plays: 3 },
+      ];
+
+      const mockTopArtists = [
+        { artistId: 'artist-001', totalPlays: 8 },
+        { artistId: 'artist-002', totalPlays: 4 },
+      ];
+
+      mockUserPlayModel.aggregate
+        .mockResolvedValueOnce(mockTopSongs)
+        .mockResolvedValueOnce(mockTopArtists);
+
+      mockUserPlayModel.countDocuments.mockResolvedValue(8);
+
+      const result = await service.getUserContentAnalytics(userId);
+
+      expect(result).toEqual({
+        userId,
+        period: {
+          startDate: null,
+          endDate: null,
+        },
+        topSongs: mockTopSongs,
+        topArtists: mockTopArtists,
+        listeningStats: {
+          totalPlays: 8,
+          estimatedHours: 0.47, // 8 * 3.5 / 60 = 0.47
+        },
+      });
+      expect(mockUserPlayModel.aggregate).toHaveBeenCalledTimes(2);
+      expect(mockUserPlayModel.countDocuments).toHaveBeenCalledWith({ userId });
+    });
+
+    it('should get user content analytics with date filters', async () => {
+      const userId = 'user-test-123';
+      const startDate = new Date('2024-01-01');
+      const endDate = new Date('2024-12-31');
+
+      const mockTopSongs = [{ songId: 'song-001', plays: 3 }];
+      const mockTopArtists = [{ artistId: 'artist-001', totalPlays: 3 }];
+
+      mockUserPlayModel.aggregate
+        .mockResolvedValueOnce(mockTopSongs)
+        .mockResolvedValueOnce(mockTopArtists);
+
+      mockUserPlayModel.countDocuments.mockResolvedValue(3);
+
+      const result = await service.getUserContentAnalytics(
+        userId,
+        startDate,
+        endDate,
+      );
+
+      expect(result).toEqual({
+        userId,
+        period: {
+          startDate,
+          endDate,
+        },
+        topSongs: mockTopSongs,
+        topArtists: mockTopArtists,
+        listeningStats: {
+          totalPlays: 3,
+          estimatedHours: 0.18, // 3 * 3.5 / 60 = 0.175 => 0.18
+        },
+      });
+      expect(mockUserPlayModel.countDocuments).toHaveBeenCalledWith({
+        userId,
+        timestamp: {
+          $gte: startDate,
+          $lte: endDate,
+        },
+      });
+    });
+
+    it('should return empty arrays when user has no plays', async () => {
+      const userId = 'user-no-plays';
+
+      mockUserPlayModel.aggregate
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+
+      mockUserPlayModel.countDocuments.mockResolvedValue(0);
+
+      const result = await service.getUserContentAnalytics(userId);
+
+      expect(result).toEqual({
+        userId,
+        period: {
+          startDate: null,
+          endDate: null,
+        },
+        topSongs: [],
+        topArtists: [],
+        listeningStats: {
+          totalPlays: 0,
+          estimatedHours: 0,
+        },
+      });
+    });
+  });
+
+  describe('getUserActivityPatterns', () => {
+    it('should get user activity patterns successfully', async () => {
+      const userId = 'user-test-123';
+
+      const mockActivityByHour = [
+        { hour: 20, count: 15 },
+        { hour: 14, count: 10 },
+        { hour: 9, count: 8 },
+        { hour: 22, count: 5 },
+        { hour: 18, count: 3 },
+      ];
+
+      const mockDistinctDays = [
+        new Date('2024-01-01T10:00:00'),
+        new Date('2024-01-01T14:00:00'), // Same day
+        new Date('2024-01-02T10:00:00'),
+        new Date('2024-01-03T10:00:00'),
+      ];
+
+      mockModel.aggregate.mockResolvedValue(mockActivityByHour);
+      mockModel.distinct.mockReturnValue(mockDistinctDays);
+
+      const result = await service.getUserActivityPatterns(userId);
+
+      expect(result).toEqual({
+        userId,
+        activityPatterns: {
+          peakHours: mockActivityByHour.slice(0, 5),
+          totalActivities: 41, // 15 + 10 + 8 + 5 + 3
+          activeDays: 3, // unique days: 01, 02, 03
+          averageActivitiesPerDay: 13.67, // 41 / 3
+        },
+      });
+      expect(mockModel.aggregate).toHaveBeenCalledWith([
+        {
+          $match: {
+            userId,
+            eventType: { $in: [UserEventType.LOGIN, UserEventType.ACTIVITY] },
+          },
+        },
+        {
+          $group: {
+            _id: { $hour: '$timestamp' },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+        {
+          $project: {
+            _id: 0,
+            hour: '$_id',
+            count: '$count',
+          },
+        },
+      ]);
+    });
+
+    it('should return empty patterns when user has no activities', async () => {
+      const userId = 'user-no-activity';
+
+      mockModel.aggregate.mockResolvedValue([]);
+      mockModel.distinct.mockReturnValue([]);
+
+      const result = await service.getUserActivityPatterns(userId);
+
+      expect(result).toEqual({
+        userId,
+        activityPatterns: {
+          peakHours: [],
+          totalActivities: 0,
+          activeDays: 0,
+          averageActivitiesPerDay: 0,
+        },
+      });
+    });
+
+    it('should handle single activity correctly', async () => {
+      const userId = 'user-single-activity';
+
+      const mockActivityByHour = [{ hour: 15, count: 1 }];
+
+      const mockDistinctDays = [new Date('2024-01-01T15:00:00')];
+
+      mockModel.aggregate.mockResolvedValue(mockActivityByHour);
+      mockModel.distinct.mockReturnValue(mockDistinctDays);
+
+      const result = await service.getUserActivityPatterns(userId);
+
+      expect(result).toEqual({
+        userId,
+        activityPatterns: {
+          peakHours: [{ hour: 15, count: 1 }],
+          totalActivities: 1,
+          activeDays: 1,
+          averageActivitiesPerDay: 1,
+        },
+      });
     });
   });
 });
