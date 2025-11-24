@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   Query,
+  Header,
 } from '@nestjs/common';
 import {
   ArtistMetricsService,
@@ -270,5 +271,43 @@ export class ArtistMetricsController {
   @Get(':artistId')
   async getArtistMetrics(@Param('artistId') artistId: string) {
     return this.artistMetricsService.getArtistMetrics(artistId);
+  }
+
+  @ApiOperation({ summary: 'Export metrics for all artists as CSV' })
+  @ApiResponse({
+    status: 200,
+    description: 'CSV file exported successfully',
+  })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['daily', 'weekly', 'monthly', 'custom'],
+    description: 'Time period for metrics (default: monthly)',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Start date for custom period (ISO 8601)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'End date for custom period (ISO 8601)',
+  })
+  @Get('export')
+  @Header('Content-Type', 'text/csv')
+  @Header('Content-Disposition', 'attachment; filename="artists_metrics.csv"')
+  async exportArtistsMetrics(
+    @Query('period') period?: 'daily' | 'weekly' | 'monthly' | 'custom',
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.artistMetricsService.getArtistsMetricsCsv(
+      period,
+      startDate ? new Date(startDate) : undefined,
+      endDate ? new Date(endDate) : undefined,
+    );
   }
 }

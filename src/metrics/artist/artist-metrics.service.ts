@@ -14,6 +14,7 @@ import { ArtistMetric } from '../entities/artist-metric.entity';
 import { UserPlay } from '../entities/user-play.entity';
 import { UserLike } from '../entities/user-like.entity';
 import { UserShare } from '../entities/user-share.entity';
+import { Parser } from 'json2csv';
 
 export interface TopArtistMetric {
   artistId: string;
@@ -507,5 +508,86 @@ export class ArtistMetricsService implements OnModuleInit {
       periodEnd: new Date(),
       lastUpdated: artistMetric.timestamp,
     };
+  }
+
+  async getArtistsMetricsCsv(
+    period: 'daily' | 'weekly' | 'monthly' | 'custom' = 'monthly',
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<string> {
+    const { start, end } = this.getDateRange(period, startDate, endDate);
+    const previousStart = new Date(start);
+    const duration = end.getTime() - start.getTime();
+    previousStart.setTime(previousStart.getTime() - duration);
+    const previousEnd = new Date(start);
+
+    const artists = await this.artistMetricModel.find().exec();
+
+    const metrics = await Promise.all(
+      artists.map(async (artist) => {
+        const currentMetrics = await this.calculatePeriodMetrics(
+          artist.artistId,
+          start,
+          end,
+          artist,
+        );
+        const previousMetrics = await this.calculatePeriodMetrics(
+          artist.artistId,
+          previousStart,
+          previousEnd,
+          artist,
+        );
+
+        return {
+          artistId: artist.artistId,
+          periodStart: start.toISOString(),
+          periodEnd: end.toISOString(),
+          listeners: currentMetrics.listeners,
+          listenersVariation: this.calculatePercentageChange(
+            currentMetrics.listeners,
+            previousMetrics.listeners,
+          ),
+          followers: currentMetrics.followers,
+          followersVariation: this.calculatePercentageChange(
+            currentMetrics.followers,
+            previousMetrics.followers,
+          ),
+          plays: currentMetrics.plays,
+          playsVariation: this.calculatePercentageChange(
+            currentMetrics.plays,
+            previousMetrics.plays,
+          ),
+          likes: currentMetrics.likes,
+          likesVariation: this.calculatePercentageChange(
+            currentMetrics.likes,
+            previousMetrics.likes,
+          ),
+          shares: currentMetrics.shares,
+          sharesVariation: this.calculatePercentageChange(
+            currentMetrics.shares,
+            previousMetrics.shares,
+          ),
+        };
+      }),
+    );
+
+    const fields = [
+      'artistId',
+      'periodStart',
+      'periodEnd',
+      'listeners',
+      'listenersVariation',
+      'followers',
+      'followersVariation',
+      'plays',
+      'playsVariation',
+      'likes',
+      'likesVariation',
+      'shares',
+      'sharesVariation',
+    ];
+
+    const parser = new Parser({ fields });
+    return parser.parse(metrics);
   }
 }
