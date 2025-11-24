@@ -140,16 +140,22 @@ Comprehensive test coverage tracked automatically via Codecov:
   - **Automatic integration**: When a song play is recorded with `POST /metrics/songs/:songId/plays` (requires `artistId` and `userId` in body), the artist listener is automatically tracked
   - Tracks unique listeners per day in a 30-day rolling window
   - Automatic cleanup of data older than 30 days
-- [ ] **CA1**: Additional KPIs (followers, plays, saves, shares)
-- [ ] **CA2**: Filters by period and region
+- [x] **CA1**: Additional KPIs (followers, plays, saves, shares)
+  - Tracks followers, plays, likes (saves), and shares for each artist
+  - Includes variation percentage vs. previous period
+- [x] **CA2**: Filters by period and region
+  - Supports `daily`, `weekly`, `monthly`, and `custom` periods
+  - Pagination support for artist lists
 - [ ] **CA3**: Navigable breakdowns
-- [ ] **CA4**: Update timestamp and data freshness indicators
-- [ ] **CA5**: Export functionality (CSV/Excel)
+- [x] **CA4**: Update timestamp and data freshness indicators
+  - Metrics include `lastUpdated` timestamp
+- [x] **CA5**: Export functionality (CSV/Excel)
+  - Endpoint: `GET /metrics/artists/export` to download CSV report
 
 ### Infrastructure & Cross-cutting Concerns
 
-- [ ] Timestamp tracking for last update
-- [ ] Period-based filtering (daily, weekly, monthly, custom range)
+- [x] Timestamp tracking for last update
+- [x] Period-based filtering (daily, weekly, monthly, custom range)
 - [ ] Region/country-based filtering
 - [ ] Song ↔ Album relationship entity
 - [ ] Aggregation and analytics queries
