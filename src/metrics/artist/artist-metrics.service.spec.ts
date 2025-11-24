@@ -23,6 +23,9 @@ jest.mock('amqp-connection-manager', () => ({
 describe('ArtistMetricsService', () => {
   let service: ArtistMetricsService;
   let mockArtistMetricModel: any;
+  let mockUserPlayModel: any;
+  let mockUserLikeModel: any;
+  let mockUserShareModel: any;
 
   beforeAll(() => {
     jest.spyOn(Logger.prototype, 'log').mockImplementation();
@@ -56,6 +59,10 @@ describe('ArtistMetricsService', () => {
       }),
     };
 
+    mockUserPlayModel = { countDocuments: jest.fn().mockResolvedValue(0) };
+    mockUserLikeModel = { countDocuments: jest.fn().mockResolvedValue(0) };
+    mockUserShareModel = { countDocuments: jest.fn().mockResolvedValue(0) };
+
     const MockArtistMetric = jest.fn().mockImplementation((dto) => ({
       ...dto,
       save: jest.fn().mockResolvedValue(dto),
@@ -70,15 +77,15 @@ describe('ArtistMetricsService', () => {
         },
         {
           provide: getModelToken(UserPlay.name),
-          useValue: { countDocuments: jest.fn().mockResolvedValue(0) },
+          useValue: mockUserPlayModel,
         },
         {
           provide: getModelToken(UserLike.name),
-          useValue: { countDocuments: jest.fn().mockResolvedValue(0) },
+          useValue: mockUserLikeModel,
         },
         {
           provide: getModelToken(UserShare.name),
-          useValue: { countDocuments: jest.fn().mockResolvedValue(0) },
+          useValue: mockUserShareModel,
         },
       ],
     }).compile();
@@ -365,6 +372,55 @@ describe('ArtistMetricsService', () => {
 
       expect(result).toEqual(mockAggregateResult);
       expect(mockArtistMetricModel.aggregate).toHaveBeenCalled();
+    });
+  });
+
+  describe('getArtistsMetricsCsv', () => {
+    it('should return CSV string with metrics', async () => {
+      const mockArtists = [
+        {
+          artistId: 'artist-1',
+          listeners: [
+            { userId: 'user-1', timestamp: new Date() },
+            { userId: 'user-2', timestamp: new Date() },
+          ],
+          followers: [{ userId: 'user-1', timestamp: new Date() }],
+        },
+      ];
+
+      mockArtistMetricModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockArtists),
+      });
+
+      // Mock countDocuments for plays, likes, shares
+      mockUserPlayModel.countDocuments.mockResolvedValue(10);
+      mockUserLikeModel.countDocuments.mockResolvedValue(5);
+      mockUserShareModel.countDocuments.mockResolvedValue(2);
+
+      const csv = await service.getArtistsMetricsCsv('monthly');
+
+      expect(csv).toContain('artistId');
+      expect(csv).toContain('artist-1');
+      expect(csv).toContain('10'); // plays
+      expect(csv).toContain('5'); // likes
+      expect(csv).toContain('2'); // shares
+    });
+
+    it('should handle custom date range', async () => {
+      mockArtistMetricModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([]),
+      });
+
+      const startDate = new Date('2023-01-01');
+      const endDate = new Date('2023-01-31');
+
+      const csv = await service.getArtistsMetricsCsv(
+        'custom',
+        startDate,
+        endDate,
+      );
+
+      expect(csv).toContain('artistId');
     });
   });
 });
