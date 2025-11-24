@@ -6,7 +6,8 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, FilterQuery } from 'mongoose';
+
 import amqp, { ChannelWrapper } from 'amqp-connection-manager';
 import { ConfirmChannel } from 'amqplib';
 import { ArtistMetric } from '../entities/artist-metric.entity';
@@ -155,29 +156,172 @@ export class ArtistMetricsService implements OnModuleInit {
     };
   }
 
-  async getAllArtistsMetrics() {
-    const artists = await this.artistMetricModel.find().exec();
+  async getAllArtistsMetrics(
+    page: number = 1,
+    limit: number = 10,
+    period: 'daily' | 'weekly' | 'monthly' | 'custom' = 'monthly',
+    startDate?: Date,
+    endDate?: Date,
+  ) {
+    const { start, end } = this.getDateRange(period, startDate, endDate);
+    const previousStart = new Date(start);
+    const duration = end.getTime() - start.getTime();
+    previousStart.setTime(previousStart.getTime() - duration);
+    const previousEnd = new Date(start);
 
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const skip = (page - 1) * limit;
+    const artists = await this.artistMetricModel
+      .find()
+      .skip(skip)
+      .limit(limit)
+      .exec();
 
-    return artists.map((artist) => {
-      const recentListeners = artist.listeners.filter(
-        (listener) => new Date(listener.timestamp) >= thirtyDaysAgo,
-      );
+    const totalArtists = await this.artistMetricModel.countDocuments().exec();
 
-      const uniqueListeners = new Set(
-        recentListeners.map((listener) => listener.userId),
-      );
+    const metrics = await Promise.all(
+      artists.map(async (artist) => {
+        const currentMetrics = await this.calculatePeriodMetrics(
+          artist.artistId,
+          start,
+          end,
+          artist,
+        );
+        const previousMetrics = await this.calculatePeriodMetrics(
+          artist.artistId,
+          previousStart,
+          previousEnd,
+          artist,
+        );
 
-      return {
-        artistId: artist.artistId,
-        monthlyListeners: uniqueListeners.size,
-        periodStart: thirtyDaysAgo,
-        periodEnd: new Date(),
-        lastUpdated: artist.timestamp,
-      };
+        return {
+          artistId: artist.artistId,
+          periodStart: start,
+          periodEnd: end,
+          metrics: {
+            listeners: currentMetrics.listeners,
+            listenersVariation: this.calculatePercentageChange(
+              currentMetrics.listeners,
+              previousMetrics.listeners,
+            ),
+            followers: currentMetrics.followers,
+            followersVariation: this.calculatePercentageChange(
+              currentMetrics.followers,
+              previousMetrics.followers,
+            ),
+            plays: currentMetrics.plays,
+            playsVariation: this.calculatePercentageChange(
+              currentMetrics.plays,
+              previousMetrics.plays,
+            ),
+            likes: currentMetrics.likes,
+            likesVariation: this.calculatePercentageChange(
+              currentMetrics.likes,
+              previousMetrics.likes,
+            ),
+            shares: currentMetrics.shares,
+            sharesVariation: this.calculatePercentageChange(
+              currentMetrics.shares,
+              previousMetrics.shares,
+            ),
+          },
+        };
+      }),
+    );
+
+    return {
+      data: metrics,
+      meta: {
+        total: totalArtists,
+        page,
+        limit,
+        totalPages: Math.ceil(totalArtists / limit),
+      },
+    };
+  }
+
+  private getDateRange(
+    period: 'daily' | 'weekly' | 'monthly' | 'custom',
+    startDate?: Date,
+    endDate?: Date,
+  ): { start: Date; end: Date } {
+    const end = endDate || new Date();
+    let start = startDate;
+
+    if (!start) {
+      start = new Date(end);
+      switch (period) {
+        case 'daily':
+          start.setDate(end.getDate() - 1);
+          break;
+        case 'weekly':
+          start.setDate(end.getDate() - 7);
+          break;
+        case 'monthly':
+          start.setMonth(end.getMonth() - 1);
+          break;
+        case 'custom':
+          // If custom but no start date provided, default to 30 days
+          start.setDate(end.getDate() - 30);
+          break;
+      }
+    }
+
+    return { start, end };
+  }
+
+  private async calculatePeriodMetrics(
+    artistId: string,
+    start: Date,
+    end: Date,
+    artistMetric: ArtistMetric,
+  ) {
+    // Listeners (from ArtistMetric.listeners array)
+    // Assuming listeners array contains all unique listener events
+    // We want unique users in the period
+    const uniqueListeners = new Set(
+      artistMetric.listeners
+        .filter((l) => {
+          const timestamp = new Date(l.timestamp);
+          return timestamp >= start && timestamp <= end;
+        })
+        .map((l) => l.userId),
+    );
+
+    // Followers (Total at end of period)
+    const followersCount = artistMetric.followers.filter(
+      (f) => new Date(f.timestamp) <= end,
+    ).length;
+
+    // Plays (from UserPlay collection)
+    const plays = await this.userPlayModel.countDocuments({
+      artistId,
+      timestamp: { $gte: start, $lte: end },
     });
+
+    // Likes (from UserLike collection)
+    const likes = await this.userLikeModel.countDocuments({
+      artistId,
+      timestamp: { $gte: start, $lte: end },
+    });
+
+    // Shares (from UserShare collection)
+    const shares = await this.userShareModel.countDocuments({
+      artistId,
+      timestamp: { $gte: start, $lte: end },
+    });
+
+    return {
+      listeners: uniqueListeners.size,
+      followers: followersCount,
+      plays,
+      likes,
+      shares,
+    };
+  }
+
+  private calculatePercentageChange(current: number, previous: number): number {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return ((current - previous) / previous) * 100;
   }
 
   async getTopArtists(limit: number = 10): Promise<TopArtistMetric[]> {
@@ -262,7 +406,7 @@ export class ArtistMetricsService implements OnModuleInit {
 
   private async calculateVariation(
     model: Model<any>,
-    query: any,
+    query: FilterQuery<any>,
     dateField: string = 'timestamp',
   ) {
     const now = new Date();

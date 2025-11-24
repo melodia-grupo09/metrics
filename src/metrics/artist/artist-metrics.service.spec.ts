@@ -43,7 +43,12 @@ describe('ArtistMetricsService', () => {
         exec: jest.fn(),
       }),
       find: jest.fn().mockReturnValue({
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
         exec: jest.fn(),
+      }),
+      countDocuments: jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(0),
       }),
       aggregate: jest.fn(),
       deleteOne: jest.fn().mockReturnValue({
@@ -65,15 +70,15 @@ describe('ArtistMetricsService', () => {
         },
         {
           provide: getModelToken(UserPlay.name),
-          useValue: {},
+          useValue: { countDocuments: jest.fn().mockResolvedValue(0) },
         },
         {
           provide: getModelToken(UserLike.name),
-          useValue: {},
+          useValue: { countDocuments: jest.fn().mockResolvedValue(0) },
         },
         {
           provide: getModelToken(UserShare.name),
-          useValue: {},
+          useValue: { countDocuments: jest.fn().mockResolvedValue(0) },
         },
       ],
     }).compile();
@@ -191,6 +196,7 @@ describe('ArtistMetricsService', () => {
         {
           artistId: 'artist-1',
           listeners: [{ userId: 'user-1', timestamp: now }],
+          followers: [],
           timestamp: now,
         },
         {
@@ -199,19 +205,26 @@ describe('ArtistMetricsService', () => {
             { userId: 'user-2', timestamp: now },
             { userId: 'user-3', timestamp: now },
           ],
+          followers: [],
           timestamp: now,
         },
       ];
 
       mockArtistMetricModel.find.mockReturnValueOnce({
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
         exec: jest.fn().mockResolvedValue(mockArtists),
+      });
+
+      mockArtistMetricModel.countDocuments.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(2),
       });
 
       const result = await service.getAllArtistsMetrics();
 
-      expect(result).toHaveLength(2);
-      expect(result[0].monthlyListeners).toBe(1);
-      expect(result[1].monthlyListeners).toBe(2);
+      expect(result.data).toHaveLength(2);
+      expect(result.data[0].metrics.listeners).toBe(1);
+      expect(result.data[1].metrics.listeners).toBe(2);
     });
   });
 

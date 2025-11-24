@@ -127,9 +127,53 @@ export class ArtistMetricsController {
     status: 200,
     description: 'All artists metrics retrieved successfully',
   })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (default: 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Items per page (default: 10)',
+  })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['daily', 'weekly', 'monthly', 'custom'],
+    description: 'Time period for metrics (default: monthly)',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Start date for custom period (ISO 8601)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'End date for custom period (ISO 8601)',
+  })
   @Get()
-  async getAllArtistsMetrics() {
-    return this.artistMetricsService.getAllArtistsMetrics();
+  async getAllArtistsMetrics(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('period') period?: 'daily' | 'weekly' | 'monthly' | 'custom',
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const parsedPage = page ? parseInt(page.toString(), 10) : 1;
+    const parsedLimit = limit ? parseInt(limit.toString(), 10) : 10;
+    return this.artistMetricsService.getAllArtistsMetrics(
+      parsedPage,
+      parsedLimit,
+      period,
+      startDate ? new Date(startDate) : undefined,
+      endDate ? new Date(endDate) : undefined,
+    );
   }
 
   @ApiOperation({ summary: 'Delete an artist' })
