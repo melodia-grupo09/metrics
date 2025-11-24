@@ -4,9 +4,13 @@ import { ConfirmChannel, ConsumeMessage } from 'amqplib';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { AlbumMetric } from '../entities/album-metric.entity';
+import { UserLike } from '../entities/user-like.entity';
+import { UserShare } from '../entities/user-share.entity';
 
 interface AlbumMetricEvent {
   albumId: string;
+  artistId: string;
+  userId: string;
   metricType: 'like' | 'share';
   timestamp: Date;
 }
@@ -19,6 +23,8 @@ export class AlbumMetricsConsumer implements OnModuleInit {
   constructor(
     @InjectModel(AlbumMetric.name)
     private albumMetricModel: Model<AlbumMetric>,
+    @InjectModel(UserLike.name) private userLikeModel: Model<UserLike>,
+    @InjectModel(UserShare.name) private userShareModel: Model<UserShare>,
   ) {
     const rabbitUrl =
       process.env.CLOUDAMQP_URL ||
@@ -76,9 +82,23 @@ export class AlbumMetricsConsumer implements OnModuleInit {
       switch (content.metricType) {
         case 'like':
           existingAlbum.likes += 1;
+          await this.userLikeModel.create({
+            userId: content.userId,
+            entityId: content.albumId,
+            entityType: 'album',
+            artistId: content.artistId,
+            timestamp: content.timestamp,
+          });
           break;
         case 'share':
           existingAlbum.shares += 1;
+          await this.userShareModel.create({
+            userId: content.userId,
+            entityId: content.albumId,
+            entityType: 'album',
+            artistId: content.artistId,
+            timestamp: content.timestamp,
+          });
           break;
         default:
           this.logger.warn(

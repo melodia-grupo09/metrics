@@ -65,6 +65,7 @@ describe('ArtistMetricsConsumer', () => {
             timestamp: new Date(),
           }),
         ),
+        fields: { routingKey: 'metrics.artist.listener' },
       } as any;
 
       const mockArtist = {
@@ -98,6 +99,7 @@ describe('ArtistMetricsConsumer', () => {
             timestamp: now,
           }),
         ),
+        fields: { routingKey: 'metrics.artist.listener' },
       } as any;
 
       const mockArtist = {
@@ -124,11 +126,12 @@ describe('ArtistMetricsConsumer', () => {
       const mockMessage = {
         content: Buffer.from(
           JSON.stringify({
-            artistId: 'artist-123',
+            artistId: 'artist-unknown',
             userId: 'user-456',
             timestamp: new Date(),
           }),
         ),
+        fields: { routingKey: 'metrics.artist.listener' },
       } as any;
 
       mockModel.findOne.mockReturnValue({

@@ -3,6 +3,9 @@ import { getModelToken } from '@nestjs/mongoose';
 import { ArtistMetricsService } from './artist-metrics.service';
 import { ArtistMetric } from '../entities/artist-metric.entity';
 import { NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { UserPlay } from '../entities/user-play.entity';
+import { UserLike } from '../entities/user-like.entity';
+import { UserShare } from '../entities/user-share.entity';
 
 // Mock amqp-connection-manager
 const mockRabbitMQ = jest.fn();
@@ -59,6 +62,18 @@ describe('ArtistMetricsService', () => {
         {
           provide: getModelToken(ArtistMetric.name),
           useValue: Object.assign(MockArtistMetric, mockArtistMetricModel),
+        },
+        {
+          provide: getModelToken(UserPlay.name),
+          useValue: {},
+        },
+        {
+          provide: getModelToken(UserLike.name),
+          useValue: {},
+        },
+        {
+          provide: getModelToken(UserShare.name),
+          useValue: {},
         },
       ],
     }).compile();

@@ -10,6 +10,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { AlbumMetricsService } from './album-metrics.service';
+import { AlbumInteractionDto } from './dto/album-interaction.dto';
 import {
   ApiTags,
   ApiOperation,
@@ -39,8 +40,15 @@ export class AlbumMetricsController {
   @ApiResponse({ status: 200, description: 'Album like recorded successfully' })
   @ApiResponse({ status: 404, description: 'Album not found' })
   @Post(':albumId/likes')
-  incrementAlbumLikes(@Param('albumId') albumId: string) {
-    return this.albumMetricsService.incrementAlbumLikes(albumId);
+  incrementAlbumLikes(
+    @Param('albumId') albumId: string,
+    @Body() interactionDto: AlbumInteractionDto,
+  ) {
+    return this.albumMetricsService.incrementAlbumLikes(
+      albumId,
+      interactionDto.artistId,
+      interactionDto.userId,
+    );
   }
 
   @ApiOperation({ summary: 'Increment album shares' })
@@ -50,8 +58,15 @@ export class AlbumMetricsController {
   })
   @ApiResponse({ status: 404, description: 'Album not found' })
   @Post(':albumId/shares')
-  incrementAlbumShares(@Param('albumId') albumId: string) {
-    return this.albumMetricsService.incrementAlbumShares(albumId);
+  incrementAlbumShares(
+    @Param('albumId') albumId: string,
+    @Body() interactionDto: AlbumInteractionDto,
+  ) {
+    return this.albumMetricsService.incrementAlbumShares(
+      albumId,
+      interactionDto.artistId,
+      interactionDto.userId,
+    );
   }
 
   @ApiOperation({ summary: 'Get album metrics' })

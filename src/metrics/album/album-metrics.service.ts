@@ -62,13 +62,19 @@ export class AlbumMetricsService implements OnModuleInit {
     };
   }
 
-  async incrementAlbumLikes(albumId: string) {
+  async incrementAlbumLikes(albumId: string, artistId: string, userId: string) {
     const exists = await this.albumExists(albumId);
     if (!exists) {
       throw new NotFoundException('Album not found');
     }
 
-    const data = { albumId, metricType: 'like', timestamp: new Date() };
+    const data = {
+      albumId,
+      artistId,
+      userId,
+      metricType: 'like',
+      timestamp: new Date(),
+    };
 
     await this.channelWrapper.publish(
       'metrics_exchange',
@@ -79,13 +85,23 @@ export class AlbumMetricsService implements OnModuleInit {
     return { message: 'Album like recorded' };
   }
 
-  async incrementAlbumShares(albumId: string) {
+  async incrementAlbumShares(
+    albumId: string,
+    artistId: string,
+    userId: string,
+  ) {
     const exists = await this.albumExists(albumId);
     if (!exists) {
       throw new NotFoundException('Album not found');
     }
 
-    const data = { albumId, metricType: 'share', timestamp: new Date() };
+    const data = {
+      albumId,
+      artistId,
+      userId,
+      metricType: 'share',
+      timestamp: new Date(),
+    };
 
     await this.channelWrapper.publish(
       'metrics_exchange',

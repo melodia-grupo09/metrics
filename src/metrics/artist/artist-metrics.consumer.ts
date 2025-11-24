@@ -59,8 +59,10 @@ export class ArtistMetricsConsumer implements OnModuleInit {
       const content = JSON.parse(
         message.content.toString(),
       ) as ArtistListenerEvent;
+      const routingKey = message.fields.routingKey;
+
       this.logger.log(
-        `Processing artist listener: user ${content.userId} for artist ${content.artistId}`,
+        `Processing artist metric: ${routingKey} for artist ${content.artistId}`,
       );
 
       const existingArtist = await this.artistMetricModel
@@ -75,43 +77,70 @@ export class ArtistMetricsConsumer implements OnModuleInit {
         return;
       }
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      if (routingKey === 'metrics.artist.follow') {
+        const isFollowing = existingArtist.followers.some(
+          (f) => f.userId === content.userId,
+        );
+        if (!isFollowing) {
+          existingArtist.followers.push({
+            userId: content.userId,
+            timestamp: new Date(content.timestamp),
+          });
+          await existingArtist.save();
+          this.logger.log(
+            `Artist follower added: user ${content.userId} for artist ${content.artistId}`,
+          );
+        }
+      } else if (routingKey === 'metrics.artist.unfollow') {
+        const initialLength = existingArtist.followers.length;
+        existingArtist.followers = existingArtist.followers.filter(
+          (f) => f.userId !== content.userId,
+        );
+        if (existingArtist.followers.length < initialLength) {
+          await existingArtist.save();
+          this.logger.log(
+            `Artist follower removed: user ${content.userId} for artist ${content.artistId}`,
+          );
+        }
+      } else if (routingKey === 'metrics.artist.listener') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-      const listenerIndex = existingArtist.listeners.findIndex(
-        (listener) =>
-          listener.userId === content.userId &&
-          new Date(listener.timestamp).toDateString() === today.toDateString(),
-      );
-
-      if (listenerIndex === -1) {
-        existingArtist.listeners.push({
-          userId: content.userId,
-          timestamp: new Date(),
-        });
-
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-        existingArtist.listeners = existingArtist.listeners.filter(
-          (listener) => new Date(listener.timestamp) >= thirtyDaysAgo,
+        const listenerIndex = existingArtist.listeners.findIndex(
+          (listener) =>
+            listener.userId === content.userId &&
+            new Date(listener.timestamp).toDateString() ===
+              today.toDateString(),
         );
 
-        await existingArtist.save();
+        if (listenerIndex === -1) {
+          existingArtist.listeners.push({
+            userId: content.userId,
+            timestamp: new Date(),
+          });
 
-        this.logger.log(
-          `Artist listener added: user ${content.userId} for artist ${content.artistId}`,
-        );
-      } else {
-        this.logger.log(
-          `User ${content.userId} already counted today for artist ${content.artistId}`,
-        );
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+          existingArtist.listeners = existingArtist.listeners.filter(
+            (listener) => new Date(listener.timestamp) >= thirtyDaysAgo,
+          );
+
+          await existingArtist.save();
+          this.logger.log(
+            `Artist listener added: user ${content.userId} for artist ${content.artistId}`,
+          );
+        } else {
+          this.logger.log(
+            `User ${content.userId} already counted today for artist ${content.artistId}`,
+          );
+        }
       }
 
       this.channelWrapper.ack(message);
     } catch (error) {
       this.logger.error('Error processing artist metric:', error);
-      this.channelWrapper.nack(message, false, false);
+      // this.channelWrapper.nack(message, false, false);
     }
   }
 }

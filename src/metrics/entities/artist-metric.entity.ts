@@ -13,6 +13,9 @@ export class ArtistMetric extends Document {
   @Prop({ type: [{ userId: String, timestamp: Date }], default: [] })
   listeners: Array<{ userId: string; timestamp: Date }>;
 
+  @Prop({ type: [{ userId: String, timestamp: Date }], default: [] })
+  followers: Array<{ userId: string; timestamp: Date }>;
+
   @Prop({ default: Date.now })
   timestamp: Date;
 }

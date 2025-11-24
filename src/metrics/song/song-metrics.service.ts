@@ -88,13 +88,19 @@ export class SongMetricsService implements OnModuleInit {
     return { message: 'Song play recorded' };
   }
 
-  async incrementSongLikes(songId: string) {
+  async incrementSongLikes(songId: string, artistId: string, userId: string) {
     const exists = await this.songExists(songId);
     if (!exists) {
       throw new NotFoundException('Song not found');
     }
 
-    const data = { songId, metricType: 'like', timestamp: new Date() };
+    const data = {
+      songId,
+      artistId,
+      userId,
+      metricType: 'like',
+      timestamp: new Date(),
+    };
 
     await this.channelWrapper.publish(
       'metrics_exchange',
@@ -105,13 +111,19 @@ export class SongMetricsService implements OnModuleInit {
     return { message: 'Song like recorded' };
   }
 
-  async incrementSongShares(songId: string) {
+  async incrementSongShares(songId: string, artistId: string, userId: string) {
     const exists = await this.songExists(songId);
     if (!exists) {
       throw new NotFoundException('Song not found');
     }
 
-    const data = { songId, metricType: 'share', timestamp: new Date() };
+    const data = {
+      songId,
+      artistId,
+      userId,
+      metricType: 'share',
+      timestamp: new Date(),
+    };
 
     await this.channelWrapper.publish(
       'metrics_exchange',

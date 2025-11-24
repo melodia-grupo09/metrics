@@ -58,33 +58,54 @@ describe('AlbumMetricsController', () => {
   describe('incrementAlbumLikes', () => {
     it('should increment album likes', async () => {
       const albumId = '123e4567-e89b-12d3-a456-426614174000';
+      const interactionDto = {
+        artistId: 'artist-123',
+        userId: 'user-123',
+      };
       const expectedResult = { message: 'Album like recorded' };
 
       mockAlbumMetricsService.incrementAlbumLikes.mockResolvedValue(
         expectedResult,
       );
 
-      const result: { message: string } =
-        await controller.incrementAlbumLikes(albumId);
+      const result: { message: string } = await controller.incrementAlbumLikes(
+        albumId,
+        interactionDto,
+      );
 
       expect(result).toEqual(expectedResult);
-      expect(service.incrementAlbumLikes).toHaveBeenCalledWith(albumId);
+      expect(service.incrementAlbumLikes).toHaveBeenCalledWith(
+        albumId,
+        interactionDto.artistId,
+        interactionDto.userId,
+      );
     });
   });
 
   describe('incrementAlbumShares', () => {
     it('should increment album shares', async () => {
       const albumId = '123e4567-e89b-12d3-a456-426614174000';
+      const interactionDto = {
+        artistId: 'artist-123',
+        userId: 'user-123',
+      };
       const expectedResult = { message: 'Album share recorded' };
 
       mockAlbumMetricsService.incrementAlbumShares.mockResolvedValue(
         expectedResult,
       );
 
-      const result = await controller.incrementAlbumShares(albumId);
+      const result: { message: string } = await controller.incrementAlbumShares(
+        albumId,
+        interactionDto,
+      );
 
       expect(result).toEqual(expectedResult);
-      expect(service.incrementAlbumShares).toHaveBeenCalledWith(albumId);
+      expect(service.incrementAlbumShares).toHaveBeenCalledWith(
+        albumId,
+        interactionDto.artistId,
+        interactionDto.userId,
+      );
     });
   });
 

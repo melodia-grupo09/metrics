@@ -4,6 +4,8 @@ import { ConfirmChannel, ConsumeMessage } from 'amqplib';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { SongMetric } from '../entities/song-metric.entity';
+import { UserLike } from '../entities/user-like.entity';
+import { UserShare } from '../entities/user-share.entity';
 
 interface SongMetricEvent {
   songId: string;
@@ -21,6 +23,8 @@ export class SongMetricsConsumer implements OnModuleInit {
   constructor(
     @InjectModel(SongMetric.name)
     private songMetricModel: Model<SongMetric>,
+    @InjectModel(UserLike.name) private userLikeModel: Model<UserLike>,
+    @InjectModel(UserShare.name) private userShareModel: Model<UserShare>,
   ) {
     const rabbitUrl =
       process.env.CLOUDAMQP_URL ||
@@ -79,9 +83,23 @@ export class SongMetricsConsumer implements OnModuleInit {
           break;
         case 'like':
           existingSong.likes += 1;
+          await this.userLikeModel.create({
+            userId: content.userId,
+            entityId: content.songId,
+            entityType: 'song',
+            artistId: content.artistId,
+            timestamp: content.timestamp,
+          });
           break;
         case 'share':
           existingSong.shares += 1;
+          await this.userShareModel.create({
+            userId: content.userId,
+            entityId: content.songId,
+            entityType: 'song',
+            artistId: content.artistId,
+            timestamp: content.timestamp,
+          });
           break;
         default:
           this.logger.warn(

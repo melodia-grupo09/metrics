@@ -66,12 +66,20 @@ describe('SongMetricsController', () => {
   describe('incrementSongLikes', () => {
     it('should increment song likes successfully', async () => {
       const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+      const interactionDto = {
+        artistId: 'artist-123',
+        userId: 'user-123',
+      };
       const result = { message: 'Song like recorded' };
       mockSongMetricsService.incrementSongLikes.mockResolvedValue(result);
 
-      expect(await controller.incrementSongLikes(songId)).toBe(result);
+      expect(await controller.incrementSongLikes(songId, interactionDto)).toBe(
+        result,
+      );
       expect(mockSongMetricsService.incrementSongLikes).toHaveBeenCalledWith(
         songId,
+        interactionDto.artistId,
+        interactionDto.userId,
       );
     });
   });
@@ -79,12 +87,20 @@ describe('SongMetricsController', () => {
   describe('incrementSongShares', () => {
     it('should increment song shares successfully', async () => {
       const songId = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+      const interactionDto = {
+        artistId: 'artist-123',
+        userId: 'user-123',
+      };
       const result = { message: 'Song share recorded' };
       mockSongMetricsService.incrementSongShares.mockResolvedValue(result);
 
-      expect(await controller.incrementSongShares(songId)).toBe(result);
+      expect(await controller.incrementSongShares(songId, interactionDto)).toBe(
+        result,
+      );
       expect(mockSongMetricsService.incrementSongShares).toHaveBeenCalledWith(
         songId,
+        interactionDto.artistId,
+        interactionDto.userId,
       );
     });
   });

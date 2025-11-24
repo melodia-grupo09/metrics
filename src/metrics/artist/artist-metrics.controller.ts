@@ -149,4 +149,82 @@ export class ArtistMetricsController {
   async deleteArtist(@Param('artistId') artistId: string) {
     return this.artistMetricsService.deleteArtist(artistId);
   }
+
+  @ApiOperation({ summary: 'Add a follower to an artist' })
+  @ApiResponse({
+    status: 200,
+    description: 'Artist follower recorded successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Artist not found' })
+  @ApiParam({
+    name: 'artistId',
+    type: 'string',
+    description: 'Unique identifier for the artist',
+    example: 'artist-123',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        userId: {
+          type: 'string',
+          description: 'Unique identifier for the user',
+          example: 'user-456',
+        },
+      },
+      required: ['userId'],
+    },
+  })
+  @Post(':artistId/followers')
+  @HttpCode(HttpStatus.OK)
+  async addFollower(
+    @Param('artistId') artistId: string,
+    @Body('userId') userId: string,
+  ) {
+    return this.artistMetricsService.addFollower(artistId, userId);
+  }
+
+  @ApiOperation({ summary: 'Remove a follower from an artist' })
+  @ApiResponse({
+    status: 200,
+    description: 'Artist follower removed successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Artist or follower not found' })
+  @ApiParam({
+    name: 'artistId',
+    type: 'string',
+    description: 'Unique identifier for the artist',
+    example: 'artist-123',
+  })
+  @ApiParam({
+    name: 'userId',
+    type: 'string',
+    description: 'Unique identifier for the user',
+    example: 'user-456',
+  })
+  @Delete(':artistId/followers/:userId')
+  @HttpCode(HttpStatus.OK)
+  async removeFollower(
+    @Param('artistId') artistId: string,
+    @Param('userId') userId: string,
+  ) {
+    await this.artistMetricsService.removeFollower(artistId, userId);
+  }
+
+  @ApiOperation({ summary: 'Get full metrics for an artist' })
+  @ApiResponse({
+    status: 200,
+    description: 'Artist metrics retrieved successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Artist not found' })
+  @ApiParam({
+    name: 'artistId',
+    type: 'string',
+    description: 'Unique identifier for the artist',
+    example: 'artist-123',
+  })
+  @Get(':artistId')
+  async getArtistMetrics(@Param('artistId') artistId: string) {
+    return this.artistMetricsService.getArtistMetrics(artistId);
+  }
 }

@@ -18,6 +18,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { SongPlayDto } from './dto/song-play.dto';
+import { SongInteractionDto } from './dto/song-interaction.dto';
 
 @ApiTags('song-metrics')
 @Controller('metrics/songs')
@@ -58,8 +59,15 @@ export class SongMetricsController {
   @ApiResponse({ status: 200, description: 'Song like recorded successfully' })
   @ApiResponse({ status: 404, description: 'Song not found' })
   @Post(':songId/likes')
-  async incrementSongLikes(@Param('songId') songId: string) {
-    return this.songMetricsService.incrementSongLikes(songId);
+  async incrementSongLikes(
+    @Param('songId') songId: string,
+    @Body() interactionDto: SongInteractionDto,
+  ) {
+    return this.songMetricsService.incrementSongLikes(
+      songId,
+      interactionDto.artistId,
+      interactionDto.userId,
+    );
   }
 
   @ApiOperation({ summary: 'Increment song shares' })
@@ -69,8 +77,15 @@ export class SongMetricsController {
   })
   @ApiResponse({ status: 404, description: 'Song not found' })
   @Post(':songId/shares')
-  async incrementSongShares(@Param('songId') songId: string) {
-    return this.songMetricsService.incrementSongShares(songId);
+  async incrementSongShares(
+    @Param('songId') songId: string,
+    @Body() interactionDto: SongInteractionDto,
+  ) {
+    return this.songMetricsService.incrementSongShares(
+      songId,
+      interactionDto.artistId,
+      interactionDto.userId,
+    );
   }
 
   @ApiOperation({ summary: 'Get song metrics' })

@@ -3,6 +3,8 @@ import { getModelToken } from '@nestjs/mongoose';
 import { Logger } from '@nestjs/common';
 import { SongMetricsConsumer } from './song-metrics.consumer';
 import { SongMetric } from '../entities/song-metric.entity';
+import { UserLike } from '../entities/user-like.entity';
+import { UserShare } from '../entities/user-share.entity';
 
 // Mock amqp-connection-manager
 jest.mock('amqp-connection-manager', () => {
@@ -52,6 +54,22 @@ describe('SongMetricsConsumer', () => {
         {
           provide: getModelToken(SongMetric.name),
           useValue: mockSongModel,
+        },
+        {
+          provide: getModelToken(UserLike.name),
+          useValue: mockSongModel,
+        },
+        {
+          provide: getModelToken(SongMetric.name),
+          useValue: mockSongModel,
+        },
+        {
+          provide: getModelToken(UserLike.name),
+          useValue: { create: jest.fn().mockResolvedValue({}) },
+        },
+        {
+          provide: getModelToken(UserShare.name),
+          useValue: { create: jest.fn().mockResolvedValue({}) },
         },
       ],
     }).compile();

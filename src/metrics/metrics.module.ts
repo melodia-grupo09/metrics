@@ -14,6 +14,8 @@ import {
   ArtistMetric,
   ArtistMetricSchema,
 } from './entities/artist-metric.entity';
+import { UserLike, UserLikeSchema } from './entities/user-like.entity';
+import { UserShare, UserShareSchema } from './entities/user-share.entity';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import {
       { name: SongMetric.name, schema: SongMetricSchema },
       { name: UserMetric.name, schema: UserMetricSchema },
       { name: ArtistMetric.name, schema: ArtistMetricSchema },
+      { name: UserLike.name, schema: UserLikeSchema },
+      { name: UserShare.name, schema: UserShareSchema },
     ]),
     RabbitModule,
     UserMetricsModule,
