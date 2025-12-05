@@ -19,6 +19,9 @@ describe('ArtistMetricsController', () => {
             getAllArtistsMetrics: jest.fn(),
             getTopArtists: jest.fn(),
             deleteArtist: jest.fn(),
+            getArtistMetrics: jest.fn(),
+            getTopMarkets: jest.fn(),
+            getTopSongs: jest.fn(),
           },
         },
       ],
@@ -172,6 +175,97 @@ describe('ArtistMetricsController', () => {
 
       expect(await controller.deleteArtist(artistId)).toEqual(result);
       expect(service.deleteArtist).toHaveBeenCalledWith(artistId);
+    });
+  });
+
+  describe('getArtistMetrics', () => {
+    it('should return artist metrics with region filter', async () => {
+      const artistId = 'artist-123';
+      const region = 'Argentina';
+      const result = {
+        artistId,
+        monthlyListeners: 100,
+        followers: { total: 50, delta: 5, percentage: 10 },
+        plays: { total: 200, delta: 20, percentage: 10 },
+        saves: { total: 50, delta: 5, percentage: 10 },
+        shares: { total: 20, delta: 2, percentage: 10 },
+        periodStart: new Date(),
+        periodEnd: new Date(),
+        lastUpdated: new Date(),
+      };
+
+      jest.spyOn(service, 'getArtistMetrics').mockResolvedValue(result);
+
+      expect(await controller.getArtistMetrics(artistId, region)).toEqual(
+        result,
+      );
+      expect(service.getArtistMetrics).toHaveBeenCalledWith(artistId, region);
+    });
+  });
+
+  describe('getTopMarkets', () => {
+    it('should return top markets for an artist', async () => {
+      const artistId = 'artist-123';
+      const result = [
+        { region: 'Argentina', plays: 100 },
+        { region: 'Brazil', plays: 50 },
+      ];
+
+      jest.spyOn(service, 'getTopMarkets').mockResolvedValue(result);
+
+      expect(await controller.getTopMarkets(artistId)).toEqual(result);
+      expect(service.getTopMarkets).toHaveBeenCalledWith(
+        artistId,
+        'monthly',
+        undefined,
+        undefined,
+      );
+    });
+  });
+
+  describe('getTopSongs', () => {
+    it('should return top songs for an artist', async () => {
+      const artistId = 'artist-123';
+      const result = [
+        { songId: 'song1', plays: 100 },
+        { songId: 'song2', plays: 50 },
+      ];
+
+      jest.spyOn(service, 'getTopSongs').mockResolvedValue(result);
+
+      expect(await controller.getTopSongs(artistId)).toEqual(result);
+      expect(service.getTopSongs).toHaveBeenCalledWith(
+        artistId,
+        'monthly',
+        undefined,
+        undefined,
+        undefined,
+      );
+    });
+
+    it('should pass region filter to service', async () => {
+      const artistId = 'artist-123';
+      const region = 'Argentina';
+      const result = [{ songId: 'song1', plays: 50 }];
+
+      jest.spyOn(service, 'getTopSongs').mockResolvedValue(result);
+
+      expect(
+        await controller.getTopSongs(
+          artistId,
+          'monthly',
+          undefined,
+          undefined,
+          region,
+        ),
+      ).toEqual(result);
+      expect(service.getTopSongs).toHaveBeenCalledWith(
+        artistId,
+        'monthly',
+        undefined,
+        undefined,
+        region,
+      );
     });
   });
 });

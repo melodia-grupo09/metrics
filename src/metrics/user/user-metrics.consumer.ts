@@ -18,6 +18,7 @@ interface UserPlayMessage {
   songId: string;
   artistId: string;
   timestamp: Date;
+  region: string;
 }
 
 @Injectable()
@@ -83,6 +84,7 @@ export class UserMetricsConsumer implements OnModuleInit {
           songId: playContent.songId,
           artistId: playContent.artistId,
           timestamp: playContent.timestamp || new Date(),
+          region: playContent.region || 'Unknown',
         });
 
         await userPlay.save();

@@ -15,6 +15,9 @@ export class UserShare extends Document {
   @Prop({ required: true, index: true })
   artistId: string;
 
+  @Prop({ index: true })
+  region: string;
+
   @Prop({ required: true, index: true })
   timestamp: Date;
 }

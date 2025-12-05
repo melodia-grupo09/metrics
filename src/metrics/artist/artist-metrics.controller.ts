@@ -256,7 +256,7 @@ export class ArtistMetricsController {
     await this.artistMetricsService.removeFollower(artistId, userId);
   }
 
-  @ApiOperation({ summary: 'Get full metrics for an artist' })
+  @ApiOperation({ summary: 'Get artist metrics' })
   @ApiResponse({
     status: 200,
     description: 'Artist metrics retrieved successfully',
@@ -268,9 +268,121 @@ export class ArtistMetricsController {
     description: 'Unique identifier for the artist',
     example: 'artist-123',
   })
+  @ApiQuery({
+    name: 'region',
+    required: false,
+    type: 'string',
+    description: 'Filter metrics by region',
+    example: 'Argentina',
+  })
   @Get(':artistId')
-  async getArtistMetrics(@Param('artistId') artistId: string) {
-    return this.artistMetricsService.getArtistMetrics(artistId);
+  async getArtistMetrics(
+    @Param('artistId') artistId: string,
+    @Query('region') region?: string,
+  ) {
+    return this.artistMetricsService.getArtistMetrics(artistId, region);
+  }
+
+  @ApiOperation({ summary: 'Get top markets for an artist' })
+  @ApiResponse({
+    status: 200,
+    description: 'Top markets retrieved successfully',
+  })
+  @ApiParam({
+    name: 'artistId',
+    type: 'string',
+    description: 'Unique identifier for the artist',
+    example: 'artist-123',
+  })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['daily', 'weekly', 'monthly', 'custom'],
+    description: 'Time period for metrics',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: 'string',
+    description: 'Start date for custom period (ISO 8601)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: 'string',
+    description: 'End date for custom period (ISO 8601)',
+  })
+  @Get(':artistId/top-markets')
+  async getTopMarkets(
+    @Param('artistId') artistId: string,
+    @Query('period')
+    period: 'daily' | 'weekly' | 'monthly' | 'custom' = 'monthly',
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+    return this.artistMetricsService.getTopMarkets(
+      artistId,
+      period,
+      start,
+      end,
+    );
+  }
+
+  @ApiOperation({ summary: 'Get top songs for an artist' })
+  @ApiResponse({
+    status: 200,
+    description: 'Top songs retrieved successfully',
+  })
+  @ApiParam({
+    name: 'artistId',
+    type: 'string',
+    description: 'Unique identifier for the artist',
+    example: 'artist-123',
+  })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['daily', 'weekly', 'monthly', 'custom'],
+    description: 'Time period for metrics',
+  })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: 'string',
+    description: 'Start date for custom period (ISO 8601)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: 'string',
+    description: 'End date for custom period (ISO 8601)',
+  })
+  @ApiQuery({
+    name: 'region',
+    required: false,
+    type: 'string',
+    description: 'Filter by region',
+  })
+  @Get(':artistId/top-songs')
+  async getTopSongs(
+    @Param('artistId') artistId: string,
+    @Query('period')
+    period: 'daily' | 'weekly' | 'monthly' | 'custom' = 'monthly',
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('region') region?: string,
+  ) {
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+    return this.artistMetricsService.getTopSongs(
+      artistId,
+      period,
+      start,
+      end,
+      region,
+    );
   }
 
   @ApiOperation({ summary: 'Export metrics for all artists as CSV' })

@@ -169,6 +169,7 @@ describe('UserMetricsConsumer', () => {
         songId,
         artistId,
         timestamp: expect.any(String),
+        region: 'Unknown',
       });
       expect(mockUserModel).not.toHaveBeenCalled();
     });

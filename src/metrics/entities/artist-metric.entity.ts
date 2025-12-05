@@ -10,11 +10,17 @@ export class ArtistMetric extends Document {
   @Prop({ required: true, index: true })
   artistId: string;
 
-  @Prop({ type: [{ userId: String, timestamp: Date }], default: [] })
-  listeners: Array<{ userId: string; timestamp: Date }>;
+  @Prop({
+    type: [{ userId: String, timestamp: Date, region: String }],
+    default: [],
+  })
+  listeners: Array<{ userId: string; timestamp: Date; region: string }>;
 
-  @Prop({ type: [{ userId: String, timestamp: Date }], default: [] })
-  followers: Array<{ userId: string; timestamp: Date }>;
+  @Prop({
+    type: [{ userId: String, timestamp: Date, region: String }],
+    default: [],
+  })
+  followers: Array<{ userId: string; timestamp: Date; region: string }>;
 
   @Prop({ default: Date.now })
   timestamp: Date;

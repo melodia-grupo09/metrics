@@ -9,6 +9,7 @@ interface ArtistListenerEvent {
   artistId: string;
   userId: string;
   timestamp: Date;
+  region?: string;
 }
 
 @Injectable()
@@ -82,9 +83,14 @@ export class ArtistMetricsConsumer implements OnModuleInit {
           (f) => f.userId === content.userId,
         );
         if (!isFollowing) {
+          const region =
+            content.region ||
+            (await this.getUserRegion(content.userId)) ||
+            'Unknown';
           existingArtist.followers.push({
             userId: content.userId,
             timestamp: new Date(content.timestamp),
+            region,
           });
           await existingArtist.save();
           this.logger.log(
@@ -114,9 +120,14 @@ export class ArtistMetricsConsumer implements OnModuleInit {
         );
 
         if (listenerIndex === -1) {
+          const region =
+            content.region ||
+            (await this.getUserRegion(content.userId)) ||
+            'Unknown';
           existingArtist.listeners.push({
             userId: content.userId,
             timestamp: new Date(),
+            region,
           });
 
           const thirtyDaysAgo = new Date();
@@ -141,6 +152,22 @@ export class ArtistMetricsConsumer implements OnModuleInit {
     } catch (error) {
       this.logger.error('Error processing artist metric:', error);
       // this.channelWrapper.nack(message, false, false);
+    }
+  }
+
+  private async getUserRegion(userId: string): Promise<string | null> {
+    try {
+      const response = await fetch(
+        `https://backend-user-service-a01239c9445a.herokuapp.com/profile/${userId}`,
+      );
+      if (!response.ok) {
+        return null;
+      }
+      const data = (await response.json()) as { pais?: string };
+      return data.pais || 'Unknown';
+    } catch (error) {
+      this.logger.error(`Failed to fetch user region for ${userId}`, error);
+      return 'Unknown';
     }
   }
 }

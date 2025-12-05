@@ -59,7 +59,10 @@ describe('ArtistMetricsService', () => {
       }),
     };
 
-    mockUserPlayModel = { countDocuments: jest.fn().mockResolvedValue(0) };
+    mockUserPlayModel = {
+      countDocuments: jest.fn().mockResolvedValue(0),
+      aggregate: jest.fn(),
+    };
     mockUserLikeModel = { countDocuments: jest.fn().mockResolvedValue(0) };
     mockUserShareModel = { countDocuments: jest.fn().mockResolvedValue(0) };
 
@@ -421,6 +424,98 @@ describe('ArtistMetricsService', () => {
       );
 
       expect(csv).toContain('artistId');
+    });
+  });
+
+  describe('getArtistMetrics', () => {
+    it('should return metrics filtered by region', async () => {
+      const artistId = 'artist-123';
+      const region = 'Argentina';
+      const artistMetric = {
+        artistId,
+        listeners: [
+          { userId: 'user1', timestamp: new Date(), region: 'Argentina' },
+          { userId: 'user2', timestamp: new Date(), region: 'Brazil' },
+        ],
+        followers: [
+          { userId: 'user1', timestamp: new Date(), region: 'Argentina' },
+        ],
+        timestamp: new Date(),
+      };
+
+      mockArtistMetricModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(artistMetric),
+      });
+
+      mockUserPlayModel.countDocuments.mockResolvedValue(10);
+      mockUserLikeModel.countDocuments.mockResolvedValue(5);
+      mockUserShareModel.countDocuments.mockResolvedValue(2);
+
+      const result = await service.getArtistMetrics(artistId, region);
+
+      expect(result.monthlyListeners).toBe(1); // Only user1 from Argentina
+      expect(result.followers.total).toBe(1); // Only user1 from Argentina
+      expect(mockUserPlayModel.countDocuments).toHaveBeenCalledWith(
+        expect.objectContaining({ region }),
+      );
+    });
+  });
+
+  describe('getTopMarkets', () => {
+    it('should return top markets for an artist', async () => {
+      const artistId = 'artist-123';
+      const expectedMarkets = [
+        { region: 'Argentina', plays: 100 },
+        { region: 'Brazil', plays: 50 },
+      ];
+
+      mockUserPlayModel.aggregate.mockResolvedValue(expectedMarkets);
+
+      const result = await service.getTopMarkets(artistId);
+
+      expect(result).toEqual(expectedMarkets);
+      expect(mockUserPlayModel.aggregate).toHaveBeenCalled();
+    });
+  });
+
+  describe('getTopSongs', () => {
+    it('should return top songs for an artist', async () => {
+      const artistId = 'artist-123';
+      const expectedSongs = [
+        { songId: 'song1', plays: 100 },
+        { songId: 'song2', plays: 50 },
+      ];
+
+      mockUserPlayModel.aggregate.mockResolvedValue(expectedSongs);
+
+      const result = await service.getTopSongs(artistId);
+
+      expect(result).toEqual(expectedSongs);
+      expect(mockUserPlayModel.aggregate).toHaveBeenCalled();
+    });
+
+    it('should filter top songs by region', async () => {
+      const artistId = 'artist-123';
+      const region = 'Argentina';
+      const expectedSongs = [{ songId: 'song1', plays: 50 }];
+
+      mockUserPlayModel.aggregate.mockResolvedValue(expectedSongs);
+
+      await service.getTopSongs(
+        artistId,
+        'monthly',
+        undefined,
+        undefined,
+        region,
+      );
+
+      expect(mockUserPlayModel.aggregate).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            $match: expect.objectContaining({ region }),
+          }),
+        ]),
+      );
     });
   });
 });

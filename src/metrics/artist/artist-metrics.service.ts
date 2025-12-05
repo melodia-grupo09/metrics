@@ -409,6 +409,7 @@ export class ArtistMetricsService implements OnModuleInit {
     model: Model<any>,
     query: FilterQuery<any>,
     dateField: string = 'timestamp',
+    region?: string,
   ) {
     const now = new Date();
     const thirtyDaysAgo = new Date();
@@ -416,13 +417,18 @@ export class ArtistMetricsService implements OnModuleInit {
     const sixtyDaysAgo = new Date();
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
+    const filter: FilterQuery<any> = { ...query };
+    if (region) {
+      filter.region = region;
+    }
+
     const currentPeriodCount = await model.countDocuments({
-      ...query,
+      ...filter,
       [dateField]: { $gte: thirtyDaysAgo, $lt: now },
     });
 
     const previousPeriodCount = await model.countDocuments({
-      ...query,
+      ...filter,
       [dateField]: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo },
     });
 
@@ -441,7 +447,7 @@ export class ArtistMetricsService implements OnModuleInit {
     };
   }
 
-  async getArtistMetrics(artistId: string) {
+  async getArtistMetrics(artistId: string, region?: string) {
     const artistMetric = await this.artistMetricModel
       .findOne({ artistId })
       .exec();
@@ -453,18 +459,33 @@ export class ArtistMetricsService implements OnModuleInit {
     // Monthly Listeners
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const recentListeners = artistMetric.listeners.filter(
+
+    let recentListeners = artistMetric.listeners.filter(
       (listener) => new Date(listener.timestamp) >= thirtyDaysAgo,
     );
+
+    if (region) {
+      recentListeners = recentListeners.filter(
+        (l) => (l as { region?: string }).region === region,
+      );
+    }
+
     const uniqueListeners = new Set(
       recentListeners.map((listener) => listener.userId),
     );
     const monthlyListeners = uniqueListeners.size;
 
     // Followers
-    const totalFollowers = artistMetric.followers.length;
+    let followers = artistMetric.followers;
+    if (region) {
+      followers = followers.filter(
+        (f) => (f as { region?: string }).region === region,
+      );
+    }
+    const totalFollowers = followers.length;
+
     // Calculate follower variation (new followers in last 30 days)
-    const newFollowersLast30Days = artistMetric.followers.filter(
+    const newFollowersLast30Days = followers.filter(
       (f) => new Date(f.timestamp) >= thirtyDaysAgo,
     ).length;
 
@@ -479,19 +500,28 @@ export class ArtistMetricsService implements OnModuleInit {
     }
 
     // Plays
-    const playsMetrics = await this.calculateVariation(this.userPlayModel, {
-      artistId,
-    });
+    const playsMetrics = await this.calculateVariation(
+      this.userPlayModel,
+      { artistId },
+      'timestamp',
+      region,
+    );
 
     // Saves (Likes)
-    const savesMetrics = await this.calculateVariation(this.userLikeModel, {
-      artistId,
-    });
+    const savesMetrics = await this.calculateVariation(
+      this.userLikeModel,
+      { artistId },
+      'timestamp',
+      region,
+    );
 
     // Shares
-    const sharesMetrics = await this.calculateVariation(this.userShareModel, {
-      artistId,
-    });
+    const sharesMetrics = await this.calculateVariation(
+      this.userShareModel,
+      { artistId },
+      'timestamp',
+      region,
+    );
 
     return {
       artistId,
@@ -508,6 +538,87 @@ export class ArtistMetricsService implements OnModuleInit {
       periodEnd: new Date(),
       lastUpdated: artistMetric.timestamp,
     };
+  }
+
+  async getTopMarkets(
+    artistId: string,
+    period: 'daily' | 'weekly' | 'monthly' | 'custom' = 'monthly',
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<Array<{ region: string; plays: number }>> {
+    const { start, end } = this.getDateRange(period, startDate, endDate);
+
+    const topMarkets = await this.userPlayModel.aggregate([
+      {
+        $match: {
+          artistId,
+          timestamp: { $gte: start, $lte: end },
+        },
+      },
+      {
+        $group: {
+          _id: '$region',
+          plays: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { plays: -1 },
+      },
+      {
+        $project: {
+          _id: 0,
+          region: '$_id',
+          plays: 1,
+        },
+      },
+    ]);
+
+    return topMarkets as Array<{ region: string; plays: number }>;
+  }
+
+  async getTopSongs(
+    artistId: string,
+    period: 'daily' | 'weekly' | 'monthly' | 'custom' = 'monthly',
+    startDate?: Date,
+    endDate?: Date,
+    region?: string,
+  ): Promise<Array<{ songId: string; plays: number }>> {
+    const { start, end } = this.getDateRange(period, startDate, endDate);
+    const matchStage: FilterQuery<UserPlay> = {
+      artistId,
+      timestamp: { $gte: start, $lte: end },
+    };
+
+    if (region) {
+      matchStage.region = region;
+    }
+
+    const topSongs = await this.userPlayModel.aggregate([
+      {
+        $match: matchStage,
+      },
+      {
+        $group: {
+          _id: '$songId',
+          plays: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { plays: -1 },
+      },
+      {
+        $limit: 10,
+      },
+      {
+        $project: {
+          _id: 0,
+          songId: '$_id',
+          plays: 1,
+        },
+      },
+    ]);
+
+    return topSongs as Array<{ songId: string; plays: number }>;
   }
 
   async getArtistsMetricsCsv(

@@ -77,6 +77,8 @@ export class SongMetricsConsumer implements OnModuleInit {
         return;
       }
 
+      const region = await this.getUserRegion(content.userId);
+
       switch (content.metricType) {
         case 'play':
           existingSong.plays += 1;
@@ -89,6 +91,7 @@ export class SongMetricsConsumer implements OnModuleInit {
             entityType: 'song',
             artistId: content.artistId,
             timestamp: content.timestamp,
+            region: region || 'Unknown',
           });
           break;
         case 'share':
@@ -99,6 +102,7 @@ export class SongMetricsConsumer implements OnModuleInit {
             entityType: 'song',
             artistId: content.artistId,
             timestamp: content.timestamp,
+            region: region || 'Unknown',
           });
           break;
         default:
@@ -117,6 +121,7 @@ export class SongMetricsConsumer implements OnModuleInit {
             artistId: content.artistId,
             userId: content.userId,
             timestamp: new Date(),
+            region: region || 'Unknown',
           };
 
           await this.channelWrapper.publish(
@@ -135,6 +140,7 @@ export class SongMetricsConsumer implements OnModuleInit {
             songId: content.songId,
             artistId: content.artistId,
             timestamp: new Date(),
+            region: region || 'Unknown',
           };
 
           await this.channelWrapper.publish(
@@ -160,6 +166,22 @@ export class SongMetricsConsumer implements OnModuleInit {
     } catch (error) {
       this.logger.error('Error processing song metric:', error);
       this.channelWrapper.nack(message, false, false);
+    }
+  }
+
+  private async getUserRegion(userId: string): Promise<string | null> {
+    try {
+      const response = await fetch(
+        `https://backend-user-service-a01239c9445a.herokuapp.com/profile/${userId}`,
+      );
+      if (!response.ok) {
+        return null;
+      }
+      const data = (await response.json()) as { pais?: string };
+      return data.pais || 'Unknown';
+    } catch (error) {
+      this.logger.error(`Failed to fetch user region for ${userId}`, error);
+      return 'Unknown';
     }
   }
 }
