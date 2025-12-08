@@ -63,6 +63,63 @@ Format: `metrics.<entity>.<action>`
 - **Album metrics**: `metrics.album.like`, `metrics.album.share`
 - **User metrics**: `metrics.user.registration`, `metrics.user.activity`
 
+## Getting Started
+
+### Prerequisites
+
+- Node.js (>=18.0.0)
+- npm or yarn
+- MongoDB
+- RabbitMQ
+
+### Environment Variables
+
+```env
+PORT=3000
+MONGODB_URI=mongodb://admin:admin@localhost:27017/metrics?authSource=admin
+RABBITMQ_URL=amqp://localhost:5672
+# Or for CloudAMQP
+CLOUDAMQP_URL=...
+```
+
+### Installation
+
+```bash
+$ npm install
+```
+
+### Running the app
+
+```bash
+# development
+$ npm run start
+
+# watch mode
+$ npm run start:dev
+
+# production mode
+$ npm run start:prod
+```
+
+### Test
+
+```bash
+# unit tests
+$ npm run test
+
+# e2e tests
+$ npm run test:e2e
+
+# test coverage
+$ npm run test:cov
+```
+
+## API Documentation
+
+For comprehensive API documentation, including all endpoints, request/response schemas, and interactive testing, visit our Swagger documentation:
+
+**[Interactive API Documentation](https://melodia-metrics-e9ca6dea743b.herokuapp.com/api)**
+
 ## Code Coverage
 
 Comprehensive test coverage tracked automatically via Codecov:
@@ -94,69 +151,3 @@ Comprehensive test coverage tracked automatically via Codecov:
 - **Jest**: Testing framework with mocking capabilities
 - **ESLint**: Code quality and style enforcement
 - **TypeScript**: Type safety and enhanced developer experience
-
-## TODO Progress
-
-### Song and Album Metrics
-
-#### Song Metrics
-
-- [x] **CA1**: Song metrics (plays, likes, shares)
-  - Endpoints: `POST /song-metrics/:songId/plays`, `/likes`, `/shares`
-  - Endpoint: `GET /song-metrics/:songId` to retrieve metrics
-- [x] **CA3**: Real-time metrics updates via RabbitMQ
-
-#### Album Metrics
-
-- [x] **CA2**: Basic album metrics (likes, shares)
-  - Endpoints: `POST /metrics/:albumId/like`, `/share`
-  - Endpoint: `GET /metrics/:albumId` to retrieve metrics
-- [x] **CA2**: Total album plays (sum of all songs in the album)
-
-### User Metrics
-
-- [x] User registration and activity tracking
-  - **Registration**: `POST /metrics/users/:userId/registration` - User signup events
-  - **Login**: `POST /metrics/users/:userId/login` - User authentication events
-  - **Activity**: `POST /metrics/users/:userId/activity` - General user interactions (likes, follows, playlist creation, searches, saves, shares)
-  - **Song Plays**: Automatically tracked via RabbitMQ when songs are played
-- [x] **CA1**: Dashboard endpoints with key metrics
-  - Endpoints: `GET /metrics/users/analytics/registrations`, `/active`, `/retention`
-  - Core user analytics (registrations, active users, retention)
-- [x] **CA2**: Metrics export (CSV/JSON)
-  - Endpoint: `GET /metrics/users/export` with format parameter
-  - Supports CSV and JSON export formats
-- [x] **CA3**: Detailed user metrics breakdown
-  - Endpoint: `GET /metrics/users/:userId/analytics/content` - Top songs and artists per user
-  - Endpoint: `GET /metrics/users/:userId/analytics/patterns` - Activity patterns and listening behavior
-  - User play tracking for content analytics
-
-### Artist Metrics
-
-- [x] **CA2**: Monthly listeners metric
-  - Endpoint: `POST /metrics/artists` to create artist
-  - Endpoint: `GET /metrics/artists/:artistId/monthly-listeners` to get monthly listeners
-  - Endpoint: `GET /metrics/artists` to get all artists metrics
-  - **Automatic integration**: When a song play is recorded with `POST /metrics/songs/:songId/plays` (requires `artistId` and `userId` in body), the artist listener is automatically tracked
-  - Tracks unique listeners per day in a 30-day rolling window
-  - Automatic cleanup of data older than 30 days
-- [x] **CA1**: Additional KPIs (followers, plays, saves, shares)
-  - Tracks followers, plays, likes (saves), and shares for each artist
-  - Includes variation percentage vs. previous period
-- [x] **CA2**: Filters by period and region
-  - Supports `daily`, `weekly`, `monthly`, and `custom` periods
-  - Pagination support for artist lists
-- [ ] **CA3**: Navigable breakdowns
-- [x] **CA4**: Update timestamp and data freshness indicators
-  - Metrics include `lastUpdated` timestamp
-- [x] **CA5**: Export functionality (CSV/Excel)
-  - Endpoint: `GET /metrics/artists/export` to download CSV report
-
-### Infrastructure & Cross-cutting Concerns
-
-- [x] Timestamp tracking for last update
-- [x] Period-based filtering (daily, weekly, monthly, custom range)
-- [ ] Region/country-based filtering
-- [ ] Song ↔ Album relationship entity
-- [ ] Aggregation and analytics queries
-- [ ] Logger integration (New Relic or similar) - logs must be stored and accessible at any time
