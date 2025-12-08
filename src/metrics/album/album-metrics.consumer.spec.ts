@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { Logger } from '@nestjs/common';
+import { ConsumeMessage } from 'amqplib';
 import { AlbumMetricsConsumer } from './album-metrics.consumer';
 import { AlbumMetric } from '../entities/album-metric.entity';
 import { UserLike } from '../entities/user-like.entity';
@@ -85,7 +86,7 @@ describe('AlbumMetricsConsumer', () => {
     const createMockMessage = (content: any) =>
       ({
         content: Buffer.from(JSON.stringify(content)),
-      }) as any;
+      }) as unknown as ConsumeMessage;
 
     it('should increment album likes when processing like metric', async () => {
       const albumId = 'test-album-id';

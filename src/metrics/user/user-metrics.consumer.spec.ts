@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { Logger } from '@nestjs/common';
+import { ConsumeMessage } from 'amqplib';
 import { UserMetricsConsumer } from './user-metrics.consumer';
 import { UserMetric, UserEventType } from '../entities/user-metric.entity';
 import { UserPlay } from '../entities/user-play.entity';
@@ -78,7 +79,7 @@ describe('UserMetricsConsumer', () => {
       ({
         content: Buffer.from(JSON.stringify(content)),
         fields: { routingKey },
-      }) as any;
+      }) as unknown as ConsumeMessage;
 
     it('should record user registration event', async () => {
       const userId = 'test-user-id';

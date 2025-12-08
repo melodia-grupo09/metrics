@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { Logger } from '@nestjs/common';
+import { ConsumeMessage } from 'amqplib';
 import { SongMetricsConsumer } from './song-metrics.consumer';
 import { SongMetric } from '../entities/song-metric.entity';
 import { UserLike } from '../entities/user-like.entity';
@@ -85,7 +86,7 @@ describe('SongMetricsConsumer', () => {
     const createMockMessage = (content: any) =>
       ({
         content: Buffer.from(JSON.stringify(content)),
-      }) as any;
+      }) as unknown as ConsumeMessage;
 
     it('should increment song plays when processing play metric', async () => {
       const songId = 'test-song-id';
@@ -159,7 +160,7 @@ describe('SongMetricsConsumer', () => {
       );
 
       const publishCall = mockChannelWrapper.publish.mock.calls[0];
-      const publishedData = JSON.parse(publishCall[2].toString());
+      const publishedData = JSON.parse((publishCall[2] as Buffer).toString());
       expect(publishedData.artistId).toBe(artistId);
       expect(publishedData.userId).toBe(userId);
     });
