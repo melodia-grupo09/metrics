@@ -342,9 +342,15 @@ describe('ArtistMetricsConsumer', () => {
       expect(mockArtist.save).toHaveBeenCalled();
       // Should have user-recent and user-new. user-old should be gone.
       expect(mockArtist.listeners).toHaveLength(2);
-      expect(mockArtist.listeners.find((l) => l.userId === 'user-old')).toBeUndefined();
-      expect(mockArtist.listeners.find((l) => l.userId === 'user-recent')).toBeDefined();
-      expect(mockArtist.listeners.find((l) => l.userId === 'user-new')).toBeDefined();
+      expect(
+        mockArtist.listeners.find((l) => l.userId === 'user-old'),
+      ).toBeUndefined();
+      expect(
+        mockArtist.listeners.find((l) => l.userId === 'user-recent'),
+      ).toBeDefined();
+      expect(
+        mockArtist.listeners.find((l) => l.userId === 'user-new'),
+      ).toBeDefined();
     });
 
     it('should handle non-ok response in getUserRegion', async () => {
