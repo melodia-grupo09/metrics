@@ -140,7 +140,8 @@ export class ArtistMetricsService implements OnModuleInit {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const recentListeners = artistMetric.listeners.filter(
+    const listeners = artistMetric.listeners || [];
+    const recentListeners = listeners.filter(
       (listener) => new Date(listener.timestamp) >= thirtyDaysAgo,
     );
 
@@ -460,7 +461,8 @@ export class ArtistMetricsService implements OnModuleInit {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    let recentListeners = artistMetric.listeners.filter(
+    const listeners = artistMetric.listeners || [];
+    let recentListeners = listeners.filter(
       (listener) => new Date(listener.timestamp) >= thirtyDaysAgo,
     );
 
@@ -476,7 +478,7 @@ export class ArtistMetricsService implements OnModuleInit {
     const monthlyListeners = uniqueListeners.size;
 
     // Followers
-    let followers = artistMetric.followers;
+    let followers = artistMetric.followers || [];
     if (region) {
       followers = followers.filter(
         (f) => (f as { region?: string }).region === region,

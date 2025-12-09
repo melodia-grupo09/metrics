@@ -197,6 +197,22 @@ describe('ArtistMetricsService', () => {
         NotFoundException,
       );
     });
+
+    it('should handle missing listeners array gracefully', async () => {
+      const artistId = 'artist-123';
+      const mockArtist = {
+        artistId,
+        listeners: undefined,
+        timestamp: new Date(),
+      };
+
+      mockArtistMetricModel.findOne.mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(mockArtist),
+      });
+
+      const result = await service.getMonthlyListeners(artistId);
+      expect(result.monthlyListeners).toBe(0);
+    });
   });
 
   describe('getAllArtistsMetrics', () => {
