@@ -301,6 +301,121 @@ describe('ArtistMetricsConsumer', () => {
       // Since we mocked Logger, we can't check if it was logged unless we spy on it
       // But execution should complete without error
     });
+
+    it('should remove listeners older than 30 days when adding a new listener', async () => {
+      const mockMessage = {
+        content: Buffer.from(
+          JSON.stringify({
+            artistId: 'artist-123',
+            userId: 'user-new',
+            timestamp: new Date(),
+          }),
+        ),
+        fields: { routingKey: 'metrics.artist.listener' },
+      } as unknown as ConsumeMessage;
+
+      const oldDate = new Date();
+      oldDate.setDate(oldDate.getDate() - 31); // 31 days ago
+
+      const recentDate = new Date();
+      recentDate.setDate(recentDate.getDate() - 10); // 10 days ago
+
+      const mockArtist = {
+        artistId: 'artist-123',
+        listeners: [
+          { userId: 'user-old', timestamp: oldDate },
+          { userId: 'user-recent', timestamp: recentDate },
+        ],
+        save: jest.fn().mockResolvedValue({}),
+      };
+
+      mockModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockArtist),
+      });
+
+      (consumer as any).channelWrapper = {
+        ack: jest.fn(),
+      };
+
+      await consumer.handleArtistMetric(mockMessage);
+
+      expect(mockArtist.save).toHaveBeenCalled();
+      // Should have user-recent and user-new. user-old should be gone.
+      expect(mockArtist.listeners).toHaveLength(2);
+      expect(mockArtist.listeners.find((l) => l.userId === 'user-old')).toBeUndefined();
+      expect(mockArtist.listeners.find((l) => l.userId === 'user-recent')).toBeDefined();
+      expect(mockArtist.listeners.find((l) => l.userId === 'user-new')).toBeDefined();
+    });
+
+    it('should handle non-ok response in getUserRegion', async () => {
+      const mockMessage = {
+        content: Buffer.from(
+          JSON.stringify({
+            artistId: 'artist-123',
+            userId: 'user-456',
+            timestamp: new Date(),
+          }),
+        ),
+        fields: { routingKey: 'metrics.artist.follow' },
+      } as unknown as ConsumeMessage;
+
+      const mockArtist = {
+        artistId: 'artist-123',
+        followers: [],
+        save: jest.fn().mockResolvedValue({}),
+      };
+
+      mockModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockArtist),
+      });
+
+      (consumer as any).channelWrapper = {
+        ack: jest.fn(),
+      };
+
+      // Mock fetch to return non-ok
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+      } as any);
+
+      await consumer.handleArtistMetric(mockMessage);
+
+      expect(mockArtist.save).toHaveBeenCalled();
+      expect(mockArtist.followers[0].region).toBe('Unknown');
+    });
+
+    it('should not save if follower to remove is not found', async () => {
+      const mockMessage = {
+        content: Buffer.from(
+          JSON.stringify({
+            artistId: 'artist-123',
+            userId: 'user-456',
+            timestamp: new Date(),
+          }),
+        ),
+        fields: { routingKey: 'metrics.artist.unfollow' },
+      } as unknown as ConsumeMessage;
+
+      const mockArtist = {
+        artistId: 'artist-123',
+        followers: [{ userId: 'user-789' }], // Different user
+        save: jest.fn().mockResolvedValue({}),
+      };
+
+      mockModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockArtist),
+      });
+
+      (consumer as any).channelWrapper = {
+        ack: jest.fn(),
+      };
+
+      await consumer.handleArtistMetric(mockMessage);
+
+      expect(mockArtist.save).not.toHaveBeenCalled();
+      expect(mockArtist.followers).toHaveLength(1);
+      expect((consumer as any).channelWrapper.ack).toHaveBeenCalled();
+    });
   });
 
   describe('onModuleInit', () => {
