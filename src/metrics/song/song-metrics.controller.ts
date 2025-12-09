@@ -52,6 +52,7 @@ export class SongMetricsController {
       songId,
       playDto.artistId,
       playDto.userId,
+      playDto.region,
     );
   }
 

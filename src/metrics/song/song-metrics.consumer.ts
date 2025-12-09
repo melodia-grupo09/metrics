@@ -13,6 +13,7 @@ interface SongMetricEvent {
   userId: string;
   metricType: 'play' | 'like' | 'share';
   timestamp: Date;
+  region?: string;
 }
 
 @Injectable()
@@ -77,7 +78,8 @@ export class SongMetricsConsumer implements OnModuleInit {
         return;
       }
 
-      const region = await this.getUserRegion(content.userId);
+      const region =
+        content.region || (await this.getUserRegion(content.userId));
 
       switch (content.metricType) {
         case 'play':
