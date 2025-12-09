@@ -90,6 +90,42 @@ describe('ArtistMetricsConsumer', () => {
       expect((consumer as any).channelWrapper.ack).toHaveBeenCalled();
     });
 
+    it('should add a new listener from song play event', async () => {
+      const mockMessage = {
+        content: Buffer.from(
+          JSON.stringify({
+            songId: 'song-123',
+            artistId: 'artist-123',
+            userId: 'user-789',
+            metricType: 'play',
+            timestamp: new Date(),
+          }),
+        ),
+        fields: { routingKey: 'metrics.song.play' },
+      } as unknown as ConsumeMessage;
+
+      const mockArtist = {
+        artistId: 'artist-123',
+        listeners: [],
+        save: jest.fn().mockResolvedValue({}),
+      };
+
+      mockModel.findOne.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockArtist),
+      });
+
+      (consumer as any).channelWrapper = {
+        ack: jest.fn(),
+      };
+
+      await consumer.handleArtistMetric(mockMessage);
+
+      expect(mockArtist.save).toHaveBeenCalled();
+      expect(mockArtist.listeners).toHaveLength(1);
+      expect(mockArtist.listeners[0].userId).toBe('user-789');
+      expect((consumer as any).channelWrapper.ack).toHaveBeenCalled();
+    });
+
     it('should not duplicate listener on same day', async () => {
       const now = new Date();
       const mockMessage = {

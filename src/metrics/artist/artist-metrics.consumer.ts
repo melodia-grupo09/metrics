@@ -45,6 +45,12 @@ export class ArtistMetricsConsumer implements OnModuleInit {
         'metrics.artist.*',
       );
 
+      await channel.bindQueue(
+        queue.queue,
+        'metrics_exchange',
+        'metrics.song.play',
+      );
+
       await channel.consume(queue.queue, (message: ConsumeMessage | null) => {
         if (message) {
           void this.handleArtistMetric(message);
@@ -108,7 +114,10 @@ export class ArtistMetricsConsumer implements OnModuleInit {
             `Artist follower removed: user ${content.userId} for artist ${content.artistId}`,
           );
         }
-      } else if (routingKey === 'metrics.artist.listener') {
+      } else if (
+        routingKey === 'metrics.artist.listener' ||
+        routingKey === 'metrics.song.play'
+      ) {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
