@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class SongInteractionDto {
@@ -17,4 +17,13 @@ export class SongInteractionDto {
   @IsString()
   @IsNotEmpty()
   userId: string;
+
+  @ApiProperty({
+    description: 'Region of the user',
+    example: 'Argentina',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  region?: string;
 }

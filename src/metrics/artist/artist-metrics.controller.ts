@@ -365,6 +365,12 @@ export class ArtistMetricsController {
     type: 'string',
     description: 'Filter by region',
   })
+  @ApiQuery({
+    name: 'sortBy',
+    required: false,
+    enum: ['plays', 'likes'],
+    description: 'Sort by metric (default: plays)',
+  })
   @Get(':artistId/top-songs')
   async getTopSongs(
     @Param('artistId') artistId: string,
@@ -373,6 +379,7 @@ export class ArtistMetricsController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('region') region?: string,
+    @Query('sortBy') sortBy: 'plays' | 'likes' = 'plays',
   ) {
     const start = startDate ? new Date(startDate) : undefined;
     const end = endDate ? new Date(endDate) : undefined;
@@ -382,6 +389,7 @@ export class ArtistMetricsController {
       start,
       end,
       region,
+      sortBy,
     );
   }
 

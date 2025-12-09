@@ -582,9 +582,10 @@ export class ArtistMetricsService implements OnModuleInit {
     startDate?: Date,
     endDate?: Date,
     region?: string,
-  ): Promise<Array<{ songId: string; plays: number }>> {
+    sortBy: 'plays' | 'likes' = 'plays',
+  ): Promise<Array<{ songId: string; count: number }>> {
     const { start, end } = this.getDateRange(period, startDate, endDate);
-    const matchStage: FilterQuery<UserPlay> = {
+    const matchStage: FilterQuery<UserPlay | UserLike> = {
       artistId,
       timestamp: { $gte: start, $lte: end },
     };
@@ -593,18 +594,24 @@ export class ArtistMetricsService implements OnModuleInit {
       matchStage.region = region;
     }
 
-    const topSongs = await this.userPlayModel.aggregate([
+    let model: Model<any> = this.userPlayModel;
+    if (sortBy === 'likes') {
+      model = this.userLikeModel;
+      matchStage.entityType = 'song';
+    }
+
+    const topSongs = await model.aggregate([
       {
         $match: matchStage,
       },
       {
         $group: {
-          _id: '$songId',
-          plays: { $sum: 1 },
+          _id: sortBy === 'likes' ? '$entityId' : '$songId',
+          count: { $sum: 1 },
         },
       },
       {
-        $sort: { plays: -1 },
+        $sort: { count: -1 },
       },
       {
         $limit: 10,
@@ -613,12 +620,12 @@ export class ArtistMetricsService implements OnModuleInit {
         $project: {
           _id: 0,
           songId: '$_id',
-          plays: 1,
+          count: 1,
         },
       },
     ]);
 
-    return topSongs as Array<{ songId: string; plays: number }>;
+    return topSongs as Array<{ songId: string; count: number }>;
   }
 
   async getArtistsMetricsCsv(

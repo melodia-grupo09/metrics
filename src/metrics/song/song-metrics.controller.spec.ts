@@ -59,6 +59,7 @@ describe('SongMetricsController', () => {
         songId,
         playDto.artistId,
         playDto.userId,
+        undefined,
       );
     });
   });
@@ -80,6 +81,7 @@ describe('SongMetricsController', () => {
         songId,
         interactionDto.artistId,
         interactionDto.userId,
+        undefined,
       );
     });
   });
@@ -101,6 +103,7 @@ describe('SongMetricsController', () => {
         songId,
         interactionDto.artistId,
         interactionDto.userId,
+        undefined,
       );
     });
   });

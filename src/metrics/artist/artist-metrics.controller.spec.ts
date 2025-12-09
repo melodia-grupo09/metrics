@@ -240,6 +240,7 @@ describe('ArtistMetricsController', () => {
         undefined,
         undefined,
         undefined,
+        'plays',
       );
     });
 
@@ -265,6 +266,7 @@ describe('ArtistMetricsController', () => {
         undefined,
         undefined,
         region,
+        'plays',
       );
     });
   });

@@ -94,7 +94,12 @@ export class SongMetricsService implements OnModuleInit {
     return { message: 'Song play recorded' };
   }
 
-  async incrementSongLikes(songId: string, artistId: string, userId: string) {
+  async incrementSongLikes(
+    songId: string,
+    artistId: string,
+    userId: string,
+    region?: string,
+  ) {
     const exists = await this.songExists(songId);
     if (!exists) {
       throw new NotFoundException('Song not found');
@@ -106,6 +111,7 @@ export class SongMetricsService implements OnModuleInit {
       userId,
       metricType: 'like',
       timestamp: new Date(),
+      region,
     };
 
     await this.channelWrapper.publish(
@@ -117,7 +123,12 @@ export class SongMetricsService implements OnModuleInit {
     return { message: 'Song like recorded' };
   }
 
-  async incrementSongShares(songId: string, artistId: string, userId: string) {
+  async incrementSongShares(
+    songId: string,
+    artistId: string,
+    userId: string,
+    region?: string,
+  ) {
     const exists = await this.songExists(songId);
     if (!exists) {
       throw new NotFoundException('Song not found');
@@ -129,6 +140,7 @@ export class SongMetricsService implements OnModuleInit {
       userId,
       metricType: 'share',
       timestamp: new Date(),
+      region,
     };
 
     await this.channelWrapper.publish(

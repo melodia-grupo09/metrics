@@ -68,6 +68,7 @@ export class SongMetricsController {
       songId,
       interactionDto.artistId,
       interactionDto.userId,
+      interactionDto.region,
     );
   }
 
@@ -86,6 +87,7 @@ export class SongMetricsController {
       songId,
       interactionDto.artistId,
       interactionDto.userId,
+      interactionDto.region,
     );
   }
 
